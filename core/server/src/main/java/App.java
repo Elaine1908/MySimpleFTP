@@ -1,13 +1,11 @@
-import com.alibaba.fastjson.JSON;
-import transmit.FileMeta;
-
-import java.util.zip.GZIPInputStream;
+import server.core.MyFTPServerCore;
+import java.io.IOException;
 
 public class App {
 
-    public static void main(String[] args) throws InterruptedException {
-        FileMeta fileMeta = new FileMeta(1024, "hello.java", FileMeta.TYPE.FILE);
-        System.out.println(JSON.toJSONString(fileMeta));
-        
+    public static void main(String[] args) throws InterruptedException, IOException {
+        MyFTPServerCore myFTPServerCore = new MyFTPServerCore(3333, "D:\\");
+        myFTPServerCore.start();
+
     }
 }

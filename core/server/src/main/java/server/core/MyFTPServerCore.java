@@ -1,5 +1,7 @@
 package server.core;
 
+import server.core.thread.ListeningThread;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -9,18 +11,14 @@ import java.net.ServerSocket;
  */
 public class MyFTPServerCore {
 
-    /**
-     * 控制FTP服务器是否需要继续运行的类
-     */
-    static class Control {
-
-    }
 
     private final int listenPort;//FTP服务器的监听接口
 
     private final String rootPath;//FTP服务器的根目录
 
     private final ServerSocket serverSocket; //用来监听的ServerSocket
+
+    private final Thread listeningThread;//用来监听并
 
     /**
      * 初始化一个FTP服务器的核心，但是不开始运行它
@@ -40,7 +38,8 @@ public class MyFTPServerCore {
         //在要监听的端口上打开一个ServerSocket
         serverSocket = new ServerSocket(listenPort);
 
-
+        //主线程对象
+        listeningThread = new ListeningThread(serverSocket);
     }
 
 
@@ -48,15 +47,9 @@ public class MyFTPServerCore {
      * 开始运行这个ftp服务器
      */
     public void start() {
-
+        //开始运行主线程，注意不要run
+        listeningThread.start();
     }
 
-
-    /**
-     * 停止运行ftp服务器
-     */
-    public void stop() {
-
-    }
 
 }
