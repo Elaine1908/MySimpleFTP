@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="server.core.MyFTPServerCoreTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2021-11-06T11:43:20" hostname="DESKTOP-I34M6FE" time="0.035">
+  <properties/>
+  <testcase name="testCreateFTPServerCore()" classname="server.core.MyFTPServerCoreTest" time="0.035"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
