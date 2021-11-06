@@ -30,6 +30,14 @@ USER huajuan
 
 语法错误，命令不能被识别
 
+## 530
+
+没有登录成功
+
+
+
+
+
 
 
 # 命令：USER <username>
