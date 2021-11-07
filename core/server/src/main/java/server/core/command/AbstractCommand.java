@@ -2,6 +2,8 @@ package server.core.command;
 
 import server.core.thread.HandleUserRequestThread;
 
+import java.io.IOException;
+
 /**
  * 这是抽象用户传来的USER,PASS等命令的接口
  */
@@ -15,7 +17,7 @@ public abstract class AbstractCommand {
      *
      * @param handleUserRequestThread 线程
      */
-    public abstract void execute(HandleUserRequestThread handleUserRequestThread);
+    public abstract void execute(HandleUserRequestThread handleUserRequestThread) throws IOException;
 
     public AbstractCommand(String commandType, String commandArg) {
         this.commandType = commandType;

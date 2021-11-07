@@ -1,6 +1,7 @@
 package server.core.thread;
 
 import com.alibaba.fastjson.JSON;
+import org.apache.log4j.Logger;
 import server.core.command.AbstractCommand;
 import server.core.command.factory.CommandFactory;
 import server.core.exception.CommandSyntaxWrongException;
@@ -31,12 +32,16 @@ public class HandleUserRequestThread extends Thread {
 
     public final Map<String, String> usernameToPassword;
 
+    private final Logger logger = Logger.getLogger(HandleUserRequestThread.class);//日志记录器
+
     /**
      * 在已经accept了用户的连接请求，获得了控制连接后，新建一个处理用户请求的线程！（但不启动它）
      *
      * @param commandSocket 与用户的控制连接
      */
     public HandleUserRequestThread(Socket commandSocket) throws IOException {
+        //BasicConfigurator.configure();
+
         this.commandSocket = commandSocket;
 
         commandConnReader = new BufferedReader(new InputStreamReader(commandSocket.getInputStream()));
@@ -61,29 +66,50 @@ public class HandleUserRequestThread extends Thread {
                 //读取一行用户输入
                 String commandLine = commandConnReader.readLine();
 
+                //如果这里是null，就抛出IO异常。
+                if (commandLine == null) {
+                    throw new IOException();
+                }
+
                 //解析用户输入，获得命令对象
                 AbstractCommand command = CommandFactory.parseCommand(commandLine);
 
-                System.out.printf("已收到来自%s的请求%s，准备开始执行%n", commandSocket.getRemoteSocketAddress().toString(), JSON.toJSONString(command));
+                logger.info(String.format("已收到来自%s的请求%s，准备开始执行%n", commandSocket.getRemoteSocketAddress().toString(), JSON.toJSONString(command)));
 
                 command.execute(this);
 
             } catch (CommandSyntaxWrongException commandSyntaxWrongException) {
-                writeLine(commandSyntaxWrongException.toString());
-            } catch (IOException ignored) {
+                try {
+                    writeLine(commandSyntaxWrongException.toString());
+                } catch (IOException ignored) {
+                }
+            } catch (IOException e) {//如果运行到这里，说明连接终端了
+                closeAllConnections();
+                logger.info(String.format("%s已退出", commandSocket));
+                break;
             }
         }
 
     }
 
-    public void writeLine(String line) {
+    public void writeLine(String line) throws IOException {
         //如果解析命令的过程中出错，就写给用户错误信息
+        commandConnWriter.write(line);
+        commandConnWriter.write("\r\n");
+        commandConnWriter.flush();
+
+    }
+
+    private void closeAllConnections() {
         try {
-            commandConnWriter.write(line);
-            commandConnWriter.write("\r\n");
-            commandConnWriter.flush();
+            commandSocket.close();
+            for (Socket socket : dataSockets
+            ) {
+                socket.close();
+            }
         } catch (IOException ignored) {
         }
+
     }
 
     public Socket getCommandSocket() {

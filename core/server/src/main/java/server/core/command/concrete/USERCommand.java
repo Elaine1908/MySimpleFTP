@@ -5,6 +5,7 @@ import server.core.response.concrete.LoginSuccessResponse;
 import server.core.response.concrete.RequirePasswordResponse;
 import server.core.thread.HandleUserRequestThread;
 
+import java.io.IOException;
 import java.util.Map;
 
 public class USERCommand extends AbstractCommand {
@@ -14,7 +15,7 @@ public class USERCommand extends AbstractCommand {
     }
 
     @Override
-    public void execute(HandleUserRequestThread handleUserRequestThread) {
+    public void execute(HandleUserRequestThread handleUserRequestThread) throws IOException {
         handleUserRequestThread.setLoginSuccessful(false);
 
         //参数名就是用户名！

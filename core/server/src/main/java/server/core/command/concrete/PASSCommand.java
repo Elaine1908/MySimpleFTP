@@ -5,7 +5,7 @@ import server.core.response.concrete.LoginSuccessResponse;
 import server.core.response.concrete.NotLoginResponse;
 import server.core.thread.HandleUserRequestThread;
 
-import java.util.Locale;
+import java.io.IOException;
 import java.util.Map;
 
 public class PASSCommand extends AbstractCommand {
@@ -15,7 +15,7 @@ public class PASSCommand extends AbstractCommand {
     }
 
     @Override
-    public void execute(HandleUserRequestThread handleUserRequestThread) {
+    public void execute(HandleUserRequestThread handleUserRequestThread) throws IOException {
         String password = commandArg;
         String username = handleUserRequestThread.getUsername();
         Map<String, String> usernameToPassword = handleUserRequestThread.usernameToPassword;
