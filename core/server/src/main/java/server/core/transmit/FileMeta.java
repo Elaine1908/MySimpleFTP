@@ -1,4 +1,4 @@
-package transmit;
+package server.core.transmit;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;

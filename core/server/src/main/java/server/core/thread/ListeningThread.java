@@ -38,7 +38,6 @@ public class ListeningThread extends Thread {
             } catch (IOException ignored) {
             }
 
-
         }
     }
 }
