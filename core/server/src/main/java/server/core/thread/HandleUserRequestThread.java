@@ -7,6 +7,7 @@ import server.core.command.factory.CommandFactory;
 import server.core.exception.CommandSyntaxWrongException;
 
 import java.io.*;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,7 +19,16 @@ import java.util.Map;
  */
 public class HandleUserRequestThread extends Thread {
 
+    /**
+     * 此时是主动传输模式还是被动传输模式
+     */
+    public enum PassiveActive {
+        PASSIVE, ACTIVE
+    }
+
     private final Socket commandSocket;//和用户的控制连接，用户在控制连接上输入指令，然后服务端在控制连接上读取并解析用户的指令
+
+    private ServerSocket passiveModeServerSocket;//被动模式下用来监听用户连接请求的socket
 
     private final BufferedReader commandConnReader;//在控制连接上读取的字符流
 
@@ -33,6 +43,9 @@ public class HandleUserRequestThread extends Thread {
     public final Map<String, String> usernameToPassword;
 
     private final Logger logger = Logger.getLogger(HandleUserRequestThread.class);//日志记录器
+
+    private PassiveActive passiveActive;
+
 
     /**
      * 在已经accept了用户的连接请求，获得了控制连接后，新建一个处理用户请求的线程！（但不启动它）
@@ -147,5 +160,21 @@ public class HandleUserRequestThread extends Thread {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public ServerSocket getPassiveModeServerSocket() {
+        return passiveModeServerSocket;
+    }
+
+    public void setPassiveModeServerSocket(ServerSocket passiveModeServerSocket) {
+        this.passiveModeServerSocket = passiveModeServerSocket;
+    }
+
+    public PassiveActive getPassiveActive() {
+        return passiveActive;
+    }
+
+    public void setPassiveActive(PassiveActive passiveActive) {
+        this.passiveActive = passiveActive;
     }
 }
