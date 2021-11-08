@@ -117,16 +117,27 @@ public class HandleUserRequestThread extends Thread {
 
     }
 
-    private void closeAllConnections() {
+    public void closeAllConnections() {
         try {
             commandSocket.close();
-            for (Socket socket : dataSockets
-            ) {
-                socket.close();
-            }
+
         } catch (IOException ignored) {
         }
 
+        for (Socket socket : dataSockets
+        ) {
+            try {
+                socket.close();
+            } catch (IOException ignored) {
+            }
+        }
+
+        try {
+            if (passiveModeServerSocket != null) {
+                passiveModeServerSocket.close();
+            }
+        } catch (IOException ignored) {
+        }
     }
 
     public Socket getCommandSocket() {
