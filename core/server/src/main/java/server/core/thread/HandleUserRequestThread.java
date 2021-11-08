@@ -28,8 +28,6 @@ public class HandleUserRequestThread extends Thread {
 
     private final Socket commandSocket;//和用户的控制连接，用户在控制连接上输入指令，然后服务端在控制连接上读取并解析用户的指令
 
-    private ServerSocket passiveModeServerSocket;//被动模式下用来监听用户连接请求的socket
-
     private final BufferedReader commandConnReader;//在控制连接上读取的字符流
 
     private final BufferedWriter commandConnWriter;//在控制连接上写入的字符流
@@ -44,7 +42,13 @@ public class HandleUserRequestThread extends Thread {
 
     private final Logger logger = Logger.getLogger(HandleUserRequestThread.class);//日志记录器
 
-    private PassiveActive passiveActive;
+    private PassiveActive passiveActive;//记录此时是被动模式还是主动模式
+
+    private ServerSocket passiveModeServerSocket;//被动模式下用来监听用户连接请求的socket
+
+    private String clientIPAddress;//用于在主动模式中记录客户端的ip地址
+
+    private int clientPort;//用于在主动模式下记录客户端的端口
 
 
     /**
@@ -176,5 +180,21 @@ public class HandleUserRequestThread extends Thread {
 
     public void setPassiveActive(PassiveActive passiveActive) {
         this.passiveActive = passiveActive;
+    }
+
+    public String getClientIPAddress() {
+        return clientIPAddress;
+    }
+
+    public void setClientIPAddress(String clientIPAddress) {
+        this.clientIPAddress = clientIPAddress;
+    }
+
+    public int getClientPort() {
+        return clientPort;
+    }
+
+    public void setClientPort(int clientPort) {
+        this.clientPort = clientPort;
     }
 }
