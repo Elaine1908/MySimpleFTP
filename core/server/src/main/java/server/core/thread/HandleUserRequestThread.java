@@ -231,4 +231,13 @@ public class HandleUserRequestThread extends Thread {
     public String getRootPath() {
         return rootPath;
     }
+
+    /**
+     * 在执行RETR和STOR方法前，先根据主动模式还是被动模式，建立数据连接
+     *
+     * @return 建立数据连接是否成功
+     */
+    public boolean buildDataConnection() {
+        
+    }
 }
