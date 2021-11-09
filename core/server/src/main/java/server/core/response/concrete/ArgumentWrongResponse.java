@@ -2,13 +2,13 @@ package server.core.response.concrete;
 
 import server.core.response.AbstractResponse;
 
-public class ArgumentWrongException extends AbstractResponse {
+public class ArgumentWrongResponse extends AbstractResponse {
 
-    public ArgumentWrongException(String message) {
+    public ArgumentWrongResponse(String message) {
         super(501, message);
     }
 
-    public ArgumentWrongException() {
+    public ArgumentWrongResponse() {
         super(501, "参数语法错误");
     }
 }

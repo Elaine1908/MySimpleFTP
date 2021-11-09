@@ -1,10 +1,8 @@
 package server.core.command.concrete;
 
-import jdk.jshell.spi.ExecutionControl;
 import server.core.command.AbstractCommand;
-import server.core.response.concrete.ArgumentWrongException;
+import server.core.response.concrete.ArgumentWrongResponse;
 import server.core.response.concrete.CommandOKResponse;
-import server.core.response.concrete.NoImplementationResponse;
 import server.core.response.concrete.NotLoginResponse;
 import server.core.thread.HandleUserRequestThread;
 
@@ -40,7 +38,7 @@ public class LFFRCommand extends AbstractCommand {
 
         //判断是否存在，是文件夹，如果不是就返回给用户错误信息
         if (!folderFile.exists() || !folderFile.isDirectory()) {
-            handleUserRequestThread.writeLine(new ArgumentWrongException("目标“文件夹”不存在或不是一个文件夹").toString());
+            handleUserRequestThread.writeLine(new ArgumentWrongResponse("目标“文件夹”不存在或不是一个文件夹").toString());
             return;
         }
 
