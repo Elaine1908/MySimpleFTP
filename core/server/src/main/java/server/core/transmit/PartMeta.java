@@ -7,7 +7,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class FileMeta {
+public class PartMeta {
 
     public enum TYPE {
         FILE,
@@ -17,10 +17,12 @@ public class FileMeta {
     public long size;
     public String filename;
     public TYPE type;
+    public int partID;
 
-    public FileMeta(int size, String filename, TYPE type) {
+    public PartMeta(long size, String filename, TYPE type, int partID) {
         this.size = size;
         this.filename = filename;
         this.type = type;
+        this.partID = partID;
     }
 }

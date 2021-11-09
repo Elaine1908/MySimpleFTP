@@ -10,14 +10,16 @@ import java.net.Socket;
 public class ListeningThread extends Thread {
 
     private final ServerSocket serverSocket;//用来监听的ServerSocket
+    private final String rootPath;//ftp服务器的根目录
 
     /**
      * 传入一个ServerSocket(在这个套接字上监听并accept用户的连接请求)
      *
      * @param serverSocket 监听并accept用户连接请求的socket
      */
-    public ListeningThread(ServerSocket serverSocket) {
+    public ListeningThread(ServerSocket serverSocket, String rootPath) {
         this.serverSocket = serverSocket;
+        this.rootPath = rootPath;
     }
 
     @Override
@@ -31,7 +33,7 @@ public class ListeningThread extends Thread {
                 clientCommandSocket = serverSocket.accept();
 
                 //创建处理用户请求的线程
-                Thread handleUserRequestThread = new HandleUserRequestThread(clientCommandSocket);
+                Thread handleUserRequestThread = new HandleUserRequestThread(clientCommandSocket, rootPath);
 
                 //线程开始运行
                 handleUserRequestThread.start();

@@ -36,7 +36,41 @@ USER huajuan
 
 
 
+# 命令：LFFR <foldername>
 
+## 解释
+
+这个命令其实在要求中没有，是我自己加的，主要的用途是递归地列出服务器上的一个文件夹中所有的文件及其路径，这样解决从服务器下载文件夹的时候，客户端只需要先调用LFFR获得文件夹中的所有文件，然后像服务器下载每一个文件即可，简化设计。
+
+**LFFR=List Files in a FoldeR**
+
+## 参数
+
+foldername：服务器上的文件夹名
+
+## 响应
+
+1.如果文件夹不存在，或者文件夹很明显是个错误的参数，则在控制连接上返回
+
+```
+501 找不到文件夹
+```
+
+2.如果文件夹存在，则先在控制连接上输出一个
+
+```
+200 命令OK
+```
+
+然后递归地列出文件夹中所有的文件，最后一行后，跟一个<CRLF>表示结束了。
+
+```
+/pcs小程序/pcs_reg/.git/config<CRLF>
+/pcs小程序/pcs_reg/.git/description<CRLF>
+/pcs小程序/pcs_reg/.git/HEAD<CRLF>
+/pcs小程序/pcs_reg/.git/hooks/applypatch-msg.sample<CRLF>
+<CRLF>表示结束
+```
 
 
 
@@ -170,25 +204,48 @@ type=B **Binary模式**
 
 pathname：要取回文件的路径名，比如
 
+**在ASCII模式下**
+
+```
+RETR /novels/盗墓笔记.txt
+```
+
+**在Binary模式下**
+
 ```
 RETR /softwares/office365.iso
 ```
 
-## 服务端的行为
+## 创建数据连接的方法
 
-1.先在数据连接上以JSON形式，UTF-8编码的形式发送一个FileMeta，以<CRLF>结尾。
+### 被动模式
+
+
+
+
+
+## 传输方法
+
+### ASCII模式
+
+1.用Scanner或者BufferedReader**按行**读取 盗墓笔记.txt ，在数据连接上按行发送，每行以<CRLF>结尾。
+
+2.发送完毕后关闭数据连接
+
+### Binary模式
+
+1.如果pathname是一个文件夹，则服务器会在递归地列出其中的所有文件，然后关闭连接。比如
 
 ```
-{"filename":"hello.java","size":1024,"type":"FILE"}
+RETR /homework
+
+/homework/HW1.pdf
+/homework/HW2.pdf
+/homework/backup/HW1_old.pdf
+(连接关闭)
 ```
 
-2.在数据连接的InputStream上按字节写文件
 
-3.如果是目录，循环执行1和2
-
-4.全部发送完成后，发送一个<CRLF>
-
-**我的想法：如果是目录，也许可以在服务端用压缩工具先把目录压缩成一个文件，然后当成单个文件发送，再在客户端解压。所以在FileMeta中预留了type字段，如果type=“DIRECTORY”，则客户端应该解压收到的文件。**
 
 ## 客户端的行为
 
@@ -210,43 +267,7 @@ RETR /softwares/office365.iso
 
 # 命令：STOR <pathname>
 
-## 参数
-
-pathname：要上传文件的路径名，比如
-
-```
-RETR /softwares/office365.iso
-```
-
-## 客户端的行为
-
-1.先在数据连接上以JSON形式，UTF-8编码的形式发送一个FileMeta，以<CRLF>结尾。
-
-```
-{"filename":"hello.java","size":1024,"type":"FILE"}
-```
-
-2.在数据连接的InputStream上按字节写文件
-
-3.如果是目录，循环执行1和2
-
-4.全部发送完成后，发送一个<CRLF>
-
-## 服务端的行为
-
-按一定方法读取服务端传来的数据，写入磁盘。
-
-## 响应
-
-### 150->250，150->425，150->426
-
-150 File status okay; about to open data connection. （文件状态 OK，将打开数据连接）
-
-250 Requested file action okay, completed. （请求文件动作 OK，完成）
-
-425 Can't open data connection. （不能打开数据连接）
-
-426 Connection closed; transfer aborted. （连接关闭，放弃传输）
+和RETE类似，客户端服务端反一下。
 
 
 

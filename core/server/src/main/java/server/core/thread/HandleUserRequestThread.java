@@ -32,6 +32,8 @@ public class HandleUserRequestThread extends Thread {
 
     private final Socket commandSocket;//和用户的控制连接，用户在控制连接上输入指令，然后服务端在控制连接上读取并解析用户的指令
 
+    private final String rootPath;//ftp服务器的根目录
+
     private final BufferedReader commandConnReader;//在控制连接上读取的字符流
 
     private final BufferedWriter commandConnWriter;//在控制连接上写入的字符流
@@ -63,10 +65,12 @@ public class HandleUserRequestThread extends Thread {
      *
      * @param commandSocket 与用户的控制连接
      */
-    public HandleUserRequestThread(Socket commandSocket) throws IOException {
+    public HandleUserRequestThread(Socket commandSocket, String rootPath) throws IOException {
         //BasicConfigurator.configure();
 
         this.commandSocket = commandSocket;
+        this.rootPath = rootPath;
+
 
         commandConnReader = new BufferedReader(new InputStreamReader(commandSocket.getInputStream()));
         commandConnWriter = new BufferedWriter(new OutputStreamWriter(commandSocket.getOutputStream()));
@@ -222,5 +226,9 @@ public class HandleUserRequestThread extends Thread {
 
     public void setAsciiBinary(ASCIIBinary asciiBinary) {
         this.asciiBinary = asciiBinary;
+    }
+
+    public String getRootPath() {
+        return rootPath;
     }
 }

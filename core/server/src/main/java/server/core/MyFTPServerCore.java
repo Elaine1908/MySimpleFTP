@@ -39,7 +39,7 @@ public class MyFTPServerCore {
         serverSocket = new ServerSocket(listenPort);
 
         //主线程对象
-        listeningThread = new ListeningThread(serverSocket);
+        listeningThread = new ListeningThread(serverSocket, rootPath);
     }
 
 
