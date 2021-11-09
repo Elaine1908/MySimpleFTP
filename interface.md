@@ -216,17 +216,11 @@ RETR /novels/盗墓笔记.txt
 RETR /softwares/office365.iso
 ```
 
-## 创建数据连接的方法
-
-### 被动模式
-
-
-
-
-
-## 传输方法
+## 传输数据格式
 
 ### ASCII模式
+
+ASCII模式不支持并行传输优化。
 
 1.用Scanner或者BufferedReader**按行**读取 盗墓笔记.txt ，在数据连接上按行发送，每行以<CRLF>结尾。
 
@@ -234,40 +228,35 @@ RETR /softwares/office365.iso
 
 ### Binary模式
 
-1.如果pathname是一个文件夹，则服务器会在递归地列出其中的所有文件，然后关闭连接。比如
+为了完成optimization的15points，考虑使用两个数据连接并行传输数据。因此在每个part前需要有一个关于这个part的元信息。
+
+1.先在每个数据连接上，以JSON的形式写一个PartMeta（Part的元信息），以CRLF结尾。以下是例子
 
 ```
-RETR /homework
-
-/homework/HW1.pdf
-/homework/HW2.pdf
-/homework/backup/HW1_old.pdf
-(连接关闭)
+{"compressed":"NOT_COMPRESSED","filename":"/hello.java","partID":0,"size":1024}<CRLF>
 ```
 
+字段解释
 
+compressed: 有COMPRESSED和NOT_COMPRESSED两种值，可能在传输大文件前先进行压缩是另一种优化传输时间的方式，因此这里先预留着，如果有时间的话试试看在传输前压缩大文件。
 
-## 客户端的行为
+filename: 文件名，没什么好解释的
 
-按一定方法读取服务端传来的数据，写入磁盘。
+partID: 是数据的接收方收到这些以后，如何将好几个part组织成完整的文件。partID代表这些parts的顺序，比如partID为0的part就在partID为1的part的前面
 
-## 响应
+size：是part的大小，而不是整个文件的大小
 
-### 150->250，150->425，150->426
+2.在每个数据连接上，传递对应的part的字节流，传完了关闭数据连接。
 
-150 File status okay; about to open data connection. （文件状态 OK，将打开数据连接）
+## 流程图
 
-250 Requested file action okay, completed. （请求文件动作 OK，完成）
-
-425 Can't open data connection. （不能打开数据连接）
-
-426 Connection closed; transfer aborted. （连接关闭，放弃传输）
+![如何建立数据连接](如何建立数据连接.png)
 
 
 
 # 命令：STOR <pathname>
 
-和RETE类似，客户端服务端反一下。
+和RETE类似，客户端服务端反一下。注意如果需要上传文件夹，则应该是客户端用一个循环上传每个文件。
 
 
 

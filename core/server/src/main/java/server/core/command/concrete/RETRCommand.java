@@ -13,7 +13,7 @@ public class RETRCommand extends AbstractCommand {
 
     @Override
     public void execute(HandleUserRequestThread handleUserRequestThread) throws IOException {
-        handleUserRequestThread.writeLine(new NoImplementationResponse().toString());
+
 
     }
 }

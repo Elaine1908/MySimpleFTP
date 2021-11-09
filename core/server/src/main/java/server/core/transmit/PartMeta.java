@@ -9,20 +9,20 @@ import lombok.Setter;
 @NoArgsConstructor
 public class PartMeta {
 
-    public enum TYPE {
-        FILE,
-        DIRECTORY
+    public enum Compressed {
+        COMPRESSED,
+        NOT_COMPRESSED
     }
 
     public long size;
     public String filename;
-    public TYPE type;
+    public Compressed compressed;
     public int partID;
 
-    public PartMeta(long size, String filename, TYPE type, int partID) {
+    public PartMeta(long size, String filename, Compressed compressed, int partID) {
         this.size = size;
         this.filename = filename;
-        this.type = type;
+        this.compressed = compressed;
         this.partID = partID;
     }
 }
