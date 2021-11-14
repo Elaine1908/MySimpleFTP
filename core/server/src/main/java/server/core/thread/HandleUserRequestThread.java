@@ -238,83 +238,46 @@ public class HandleUserRequestThread extends Thread {
     /**
      * 在执行RETR和STOR方法前，先根据主动模式还是被动模式，建立数据连接
      *
-     * @param fileAbsolutePath 要下载的文件的绝对路径。如果是STOR，则为null
      * @return 建立数据连接是否成功
      */
-    public boolean buildDataConnection(String fileAbsolutePath) throws IOException {
-        if (!isLoginSuccessful()) {//判断有没有登录
-            writeLine(new NotLoginResponse().toString());
-            return false;
-        }
-        if (passiveActive == null) {//如果还没有指定是被动模式还是主动模式
-            writeLine(new BadCommandSequenceResponse().toString());
-            return false;
-        }
+    public boolean buildDataConnection() {
 
-        if (fileAbsolutePath != null) {
-            File file = new File(fileAbsolutePath);
-            //判断文件是否存在，或者是否是目录
-            if (!file.exists() || file.isDirectory()) {
-                writeLine(new ArgumentWrongResponse("文件不存在").toString());
-                return false;
-            }
-        }
-
-        //如果前面都没有问题，则写给用户一个命令OK的指令
-        writeLine(new CommandOKResponse().toString());
+        //先把数据连接的列表清空
+        dataSockets.clear();
 
         if (passiveActive == PassiveActive.ACTIVE) {//主动模式
             //主动尝试联系客户端
-            Socket dataSocket1 = null;
-            Socket dataSocket2 = null;
+            Socket dataSocket = null;
             try {
-                //尝试与客户端建立两个数据连接
-                dataSocket1 = new Socket(clientIPAddress, clientPort);
-                dataSocket2 = new Socket(clientIPAddress, clientPort);
+                //尝试与客户端建立一个数据连接！
+                dataSocket = new Socket(clientIPAddress, clientPort);
             } catch (IOException e) {
-                //如果有一个连接建立失败，就关闭已经建立的连接。并写给用户建立连接失败
-                if (dataSocket1 != null) {
-                    dataSocket1.close();
-                }
-                if (dataSocket2 != null) {
-                    dataSocket2.close();
-                }
-                writeLine(new OpenDataConnectionFailedResponse().toString());
+                //建立数据连接失败
+                return false;
             }
 
             //在数据连接的列表里加入创建好的socket
-            dataSockets.add(dataSocket1);
-            dataSockets.add(dataSocket2);
+            dataSockets.add(dataSocket);
 
-            writeLine(new ConnectionAlreadyOpenResponse().toString());
+            //建立数据连接成功
             return true;
         } else if (passiveActive == PassiveActive.PASSIVE) {//被动模式
 
             //尝试Accept客户端的socket连接请求
-            Socket dataSocket1 = null;
-            Socket dataSocket2 = null;
+            Socket dataSocket = null;
             try {
                 passiveModeServerSocket.setSoTimeout(10000);
                 //尝试与客户端建立两个数据连接
-                dataSocket1 = passiveModeServerSocket.accept();
-                dataSocket2 = passiveModeServerSocket.accept();
+                dataSocket = passiveModeServerSocket.accept();
             } catch (IOException e) {
-                //如果有一个连接建立失败，就关闭已经建立的连接。并写给用户建立连接失败
-                if (dataSocket1 != null) {
-                    dataSocket1.close();
-                }
-                if (dataSocket2 != null) {
-                    dataSocket2.close();
-                }
-                writeLine(new OpenDataConnectionFailedResponse().toString());
+                //建立连接失败
+                return false;
             }
 
             //在数据连接的列表里加入创建好的socket
-            dataSockets.add(dataSocket1);
-            dataSockets.add(dataSocket2);
+            dataSockets.add(dataSocket);
 
-            //向用户发送数据连接已经打开的响应
-            writeLine(new ConnectionAlreadyOpenResponse().toString());
+            //建立数据连接成功！
             return true;
         }
 

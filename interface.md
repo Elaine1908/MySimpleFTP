@@ -54,6 +54,12 @@ T：表示使用持久数据连接
 
 F：表示不使用持久数据连接
 
+## 行为
+
+如果参数是T，则client和server都不需要做什么，等到retr和stor的时候再打开数据连接，就好了
+
+如果参数是F，则client和server需要关闭持久化的数据连接。
+
 ## 响应
 
 ```
@@ -248,37 +254,41 @@ RETR /softwares/office365.iso
 
 ### ASCII模式
 
-ASCII模式不支持并行传输优化。
-
 1.用Scanner或者BufferedReader**按行**读取 盗墓笔记.txt ，在数据连接上按行发送，每行以<CRLF>结尾。
 
 2.发送完毕后关闭数据连接
 
+**3.ASCII模式不支持持久化数据连接传输。**
+
 ### Binary模式
 
-为了完成optimization的15points，考虑使用两个数据连接并行传输数据。因此在每个part前需要有一个关于这个part的元信息。
-
-1.先在每个数据连接上，以JSON的形式写一个PartMeta（Part的元信息），以CRLF结尾。以下是例子
+1.先在数据连接上，以JSON的形式写一个FileMeta（File的元信息），以CRLF结尾。以下是例子
 
 ```
-{"compressed":"NOT_COMPRESSED","filename":"/hello.java","partID":0,"size":1024}<CRLF>
+{"compressed":"NOT_COMPRESSED","filename":"/hello.java","size":1024}<CRLF>
 ```
 
 字段解释
 
 compressed: 有COMPRESSED和NOT_COMPRESSED两种值，可能在传输大文件前先进行压缩是另一种优化传输时间的方式，因此这里先预留着，如果有时间的话试试看在传输前压缩大文件。
 
-filename: 文件名，没什么好解释的
+filename: 文件名，就是RETR命令的参数。
 
-partID: 是数据的接收方收到这些以后，如何将好几个part组织成完整的文件。partID代表这些parts的顺序，比如partID为0的part就在partID为1的part的前面
+size：是这个文件的大小。
 
-size：是part的大小，而不是整个文件的大小
+2.在每个数据连接上，传递对应的文件的字节流。
 
-2.在每个数据连接上，传递对应的part的字节流，传完了关闭数据连接。
+3.如果是非持久数据连接，则关闭数据连接。否则下次再收到RETR的时候准备重复1和2。
 
-## 流程图
+## 建立数据连接-流程图
 
 ![如何建立数据连接](如何建立数据连接.png)
+
+## 传输数据-流程图
+
+![如何传输数据RETR](如何传输数据RETR.png)
+
+
 
 # 命令：STOR <pathname>
 

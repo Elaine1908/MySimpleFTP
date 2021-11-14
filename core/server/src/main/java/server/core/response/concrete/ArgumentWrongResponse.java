@@ -11,4 +11,5 @@ public class ArgumentWrongResponse extends AbstractResponse {
     public ArgumentWrongResponse() {
         super(501, "参数语法错误");
     }
+
 }
