@@ -69,6 +69,6 @@ public class PASVCommand extends AbstractCommand {
             //把请求写给用户
             handleUserRequestThread.writeLine(rsp.toString());
 
-        } while (openServerSocketSuccess);
+        } while (!openServerSocketSuccess);
     }
 }

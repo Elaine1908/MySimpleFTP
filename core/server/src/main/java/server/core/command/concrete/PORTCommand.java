@@ -2,11 +2,13 @@ package server.core.command.concrete;
 
 import server.core.command.AbstractCommand;
 import server.core.exception.CommandSyntaxWrongException;
+import server.core.response.concrete.ArgumentWrongResponse;
 import server.core.response.concrete.CommandOKResponse;
 import server.core.response.concrete.NotLoginResponse;
 import server.core.thread.HandleUserRequestThread;
 
 import java.io.IOException;
+import java.util.IllegalFormatCodePointException;
 
 public class PORTCommand extends AbstractCommand {
 
@@ -19,6 +21,12 @@ public class PORTCommand extends AbstractCommand {
         //检测用户有无登录，如果没有登录的话就直接显示没有登录
         if (!handleUserRequestThread.isLoginSuccessful()) {
             handleUserRequestThread.writeLine(new NotLoginResponse().toString());
+            return;
+        }
+
+        //如果用户传来的东西不含参数......
+        if (commandArg==null){
+            handleUserRequestThread.writeLine(new ArgumentWrongResponse().toString());
             return;
         }
 

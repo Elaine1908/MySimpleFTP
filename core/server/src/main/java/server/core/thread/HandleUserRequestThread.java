@@ -61,6 +61,8 @@ public class HandleUserRequestThread extends Thread {
 
     private ASCIIBinary asciiBinary = ASCIIBinary.BINARY;//记录现在是ASCII模式还是Binary模式，默认Binary
 
+    private String keepAlive = "F";//记录现在是使用持久数据连接还是非持久数据连接！
+
     /**
      * 在已经accept了用户的连接请求，获得了控制连接后，新建一个处理用户请求的线程！（但不启动它）
      *
@@ -319,5 +321,11 @@ public class HandleUserRequestThread extends Thread {
         return false;
     }
 
+    public String getKeepAlive() {
+        return keepAlive;
+    }
 
+    public void setKeepAlive(String keepAlive) {
+        this.keepAlive = keepAlive;
+    }
 }
