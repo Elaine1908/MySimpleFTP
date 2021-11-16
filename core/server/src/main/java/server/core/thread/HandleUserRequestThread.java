@@ -267,7 +267,7 @@ public class HandleUserRequestThread extends Thread {
             Socket dataSocket = null;
             try {
                 passiveModeServerSocket.setSoTimeout(10000);
-                //尝试与客户端建立两个数据连接
+                //尝试与客户端建立数据连接
                 dataSocket = passiveModeServerSocket.accept();
             } catch (IOException e) {
                 //建立连接失败

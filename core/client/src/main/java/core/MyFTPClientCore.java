@@ -1,20 +1,28 @@
 package core;
 
+import com.alibaba.fastjson.JSON;
 import core.exception.FTPClientException;
 import core.exception.ServerNotFoundException;
+import core.transmit.FileMeta;
 
 import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * FTP客户端的核心类
  */
 public class MyFTPClientCore {
+
+    private volatile String downloadDirectory;//ftp下载文件下载到哪个目录
 
     private final Socket commandSocket;//控制连接
 
@@ -32,10 +40,10 @@ public class MyFTPClientCore {
     }
 
     //默认使用被动模式
-    private PassiveActive passiveActive = PassiveActive.PASSIVE;
-    private String serverAddress;//服务器的地址，被动模式时RETR或者STOR需要连接
-    private int serverPort;//服务器的数据连接监听的端口，被动模式时RETR或者STOR需要连接
-    private ServerSocket serverSocket;//主动连接时，客户端要在这个socket上监听并accept！
+    private volatile PassiveActive passiveActive = PassiveActive.PASSIVE;
+    private volatile String serverAddress;//服务器的地址，被动模式时RETR或者STOR需要连接
+    private volatile int serverPort;//服务器的数据连接监听的端口，被动模式时RETR或者STOR需要连接
+    private volatile ServerSocket serverSocket;//主动连接时，客户端要在这个socket上监听并accept！
 
 
     /**
@@ -45,7 +53,7 @@ public class MyFTPClientCore {
         ASCII, BINARY
     }
 
-    private ASCIIBinary asciiBinary = ASCIIBinary.BINARY;//默认使用Binary模式
+    private volatile ASCIIBinary asciiBinary = ASCIIBinary.BINARY;//默认使用Binary模式
 
     /**
      * 是否使用持久化数据连接
@@ -56,7 +64,10 @@ public class MyFTPClientCore {
     }
 
     //默认不使用持久化数据连接！
-    private KeepAlive keepAlive = KeepAlive.F;
+    private volatile KeepAlive keepAlive = KeepAlive.F;
+
+    //传输数据用的数据连接
+    private volatile Socket dataSocket;
 
 
     /**
@@ -84,7 +95,7 @@ public class MyFTPClientCore {
      * @param password 密码
      * @return 是否登录成功
      */
-    public boolean login(String username, String password) {
+    public synchronized boolean login(String username, String password) {
         //尝试登录
         try {
 
@@ -104,6 +115,7 @@ public class MyFTPClientCore {
                 return false;//其他情况都认为登录失败
             }
         } catch (IOException e) {//抛出异常说明登录失败
+            discardAllOnCommandConnection();
             return false;
         }
     }
@@ -112,7 +124,7 @@ public class MyFTPClientCore {
     /**
      * 像服务器发送PASV命令，并记录服务器返回的端口号和服务器主机名
      */
-    public void pasv() throws FTPClientException {
+    public synchronized void pasv() throws FTPClientException {
 
         try {
             //尝试写入PASV命令
@@ -123,6 +135,7 @@ public class MyFTPClientCore {
 
             //如果响应不是227开头的，说明失败
             if (!response.startsWith("227")) {
+                discardAllOnCommandConnection();
                 throw new FTPClientException(response);
             }
 
@@ -141,6 +154,7 @@ public class MyFTPClientCore {
             //把主动还是被动设成PASSIVE
             passiveActive = PassiveActive.PASSIVE;
         } catch (IOException e) {
+            discardAllOnCommandConnection();
             throw new FTPClientException(e.getMessage());
         }
     }
@@ -148,7 +162,7 @@ public class MyFTPClientCore {
     /**
      *
      */
-    public void port() throws FTPClientException {
+    public synchronized void port() throws FTPClientException {
         try {
             //获得一个secureRandom对象，用于随机后面的端口
             SecureRandom random = new SecureRandom();
@@ -188,6 +202,7 @@ public class MyFTPClientCore {
 
                 String response = commandSocketReader.readLine();
                 if (!response.startsWith("200")) {
+                    discardAllOnCommandConnection();
                     throw new FTPClientException(response);
                 }
 
@@ -205,12 +220,13 @@ public class MyFTPClientCore {
 
 
         } catch (IOException e) {
+            discardAllOnCommandConnection();
             throw new FTPClientException(e.getMessage());
         }
 
     }
 
-    public void type(ASCIIBinary asciiBinary) throws FTPClientException {
+    public synchronized void type(ASCIIBinary asciiBinary) throws FTPClientException {
 
         //B代表Binary模式，A代表ASCII模式！
         String arg = (asciiBinary == ASCIIBinary.BINARY) ? "B" : "A";
@@ -222,6 +238,7 @@ public class MyFTPClientCore {
         try {
             writeLine(line);
         } catch (IOException e) {
+            discardAllOnCommandConnection();
             throw new FTPClientException(e.getMessage());
         }
 
@@ -230,11 +247,13 @@ public class MyFTPClientCore {
         try {
             response = commandSocketReader.readLine();
         } catch (IOException e) {
+            discardAllOnCommandConnection();
             throw new FTPClientException(e.getMessage());
         }
 
         //如果服务器传来的响应不成功
         if (response == null || !response.startsWith("200")) {
+            discardAllOnCommandConnection();
             throw new FTPClientException(response);
         }
 
@@ -242,7 +261,7 @@ public class MyFTPClientCore {
         this.asciiBinary = asciiBinary;
     }
 
-    public void kali(KeepAlive keepAlive) throws FTPClientException {
+    public synchronized void kali(KeepAlive keepAlive) throws FTPClientException {
         //T代表使用持久化数据连接，F代表不适用持久化数据连接！
         String arg = (keepAlive == KeepAlive.F) ? "F" : "T";
 
@@ -253,6 +272,7 @@ public class MyFTPClientCore {
         try {
             writeLine(line);
         } catch (IOException e) {
+            discardAllOnCommandConnection();
             throw new FTPClientException(e.getMessage());
         }
 
@@ -261,11 +281,13 @@ public class MyFTPClientCore {
         try {
             response = commandSocketReader.readLine();
         } catch (IOException e) {
+            discardAllOnCommandConnection();
             throw new FTPClientException(e.getMessage());
         }
 
         //如果服务器传来的响应不成功
         if (response == null || !response.startsWith("200")) {
+            discardAllOnCommandConnection();
             throw new FTPClientException(response);
         }
 
@@ -279,7 +301,7 @@ public class MyFTPClientCore {
      * @param folderName 文件夹名
      * @return 文件名的list
      */
-    public List<String> lffr(String folderName) throws FTPClientException {
+    public synchronized List<String> lffr(String folderName) throws FTPClientException {
         //要写给服务器的行
         String line = String.format("LFFR %s", folderName);
 
@@ -287,6 +309,7 @@ public class MyFTPClientCore {
             //把行写给服务器
             writeLine(line);
         } catch (IOException e) {
+            discardAllOnCommandConnection();
             throw new FTPClientException(e.getMessage());
         }
 
@@ -295,10 +318,12 @@ public class MyFTPClientCore {
         try {
             response = commandSocketReader.readLine();
         } catch (IOException e) {
+            discardAllOnCommandConnection();
             throw new FTPClientException(e.getMessage());
         }
 
         if (response == null || !response.startsWith("200")) {
+            discardAllOnCommandConnection();
             throw new FTPClientException(response);
         }
 
@@ -322,6 +347,266 @@ public class MyFTPClientCore {
     }
 
     /**
+     * 向服务器发送RETR命令 获取一个文件夹
+     *
+     * @param arg RETR命令的参数
+     */
+    public synchronized void retrieveFolder(String arg) throws FTPClientException {
+        try {
+            String[] arr = arg.split("[/]|[\\\\]");
+
+            //文件夹的名字
+            String folderName = arr[arr.length - 1];
+
+            //先用LFFR指令获得所有文件的列表
+            List<String> serverFilenameList = lffr(arg);
+
+            //计算出每个文件在client上存放的物理位置
+            List<String> clientFilenameList = Utils.getClientFilenames(downloadDirectory, serverFilenameList, folderName, arg);
+
+            //创建必要的文件夹
+            Utils.createFolders(clientFilenameList);
+
+            //从服务器上一一下载文件
+            int i = 0;
+            int j = 0;
+            while (i < serverFilenameList.size() && j < clientFilenameList.size()) {
+                retrieveSingleFileHidden(serverFilenameList.get(i), clientFilenameList.get(j));
+                i++;
+                j++;
+            }
+
+        } catch (Exception e) {
+            discardAllOnCommandConnection();
+            throw new FTPClientException(e.getMessage());
+        }
+    }
+
+    /**
+     * 向服务器发送RETR命令 获取一个文件
+     *
+     * @param arg RETR命令的参数
+     */
+    public synchronized void retrieveSingleFile(String arg) throws FTPClientException {
+        if (downloadDirectory == null) {
+            throw new FTPClientException("没有设定下载文件的目录");
+        }
+
+        String[] arr = arg.split("[/]|[\\\\]");//根据路径分隔符分割服务器上的绝对路径
+        String filename = arr[arr.length - 1];//文件真正的文件名
+
+        //要下载到的文件的文件名
+        String destFilename = downloadDirectory + File.separator + filename;
+
+        retrieveSingleFileHidden(arg, destFilename);
+    }
+
+    /**
+     * 根据文件名，下载服务器上的一个文件到指定的文件名上。
+     *
+     * @param arg 文件名
+     * @throws FTPClientException 异常
+     */
+    private synchronized void retrieveSingleFileHidden(String arg, String destFilename) throws FTPClientException {
+        //先在控制连接上写想要获取这个文件的命令！
+        try {
+            writeLine(String.format("RETR %s", arg));
+        } catch (IOException e) {
+            discardAllOnCommandConnection();
+            throw new FTPClientException(e.getMessage());
+        }
+
+        //先读取服务端的响应是不是200OK
+        try {
+            String response = commandSocketReader.readLine();
+            if (!response.startsWith("200")) {
+                discardAllOnCommandConnection();
+                throw new FTPClientException(response);
+            }
+        } catch (IOException e) {
+            discardAllOnCommandConnection();
+            throw new FTPClientException(e.getMessage());
+        }
+
+
+        //如果不使用持久连接模式，或者使用持久连接模式，但是还从来没有建立过数据连接，就要尝试新建数据连接
+        if (keepAlive == KeepAlive.F || (keepAlive == KeepAlive.T && dataSocket == null)) {
+            boolean success = buildDataConnection();
+            if (!success) {
+                discardAllOnCommandConnection();
+                throw new FTPClientException("建立数据连接失败");
+            }
+        }
+
+        //先读取服务端的响应是不是125已经建立数据连接
+        try {
+            String response = commandSocketReader.readLine();
+            if (!response.startsWith("125")) {
+                discardAllOnCommandConnection();
+                throw new FTPClientException(response);
+            }
+        } catch (IOException e) {
+            discardAllOnCommandConnection();
+            throw new FTPClientException(e.getMessage());
+        }
+
+
+        //准备从dataSocket上开始读取了
+        if (asciiBinary == ASCIIBinary.ASCII) {//ASCII模式，注意这个模式应该只用于文本文件，否则下载到文件的MD5可能不一致。
+            try {
+                BufferedWriter fOut = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(destFilename)));
+
+                //获得数据连接的reader，逐行读取并写入文件
+                BufferedReader reader = new BufferedReader(new InputStreamReader(dataSocket.getInputStream()));
+
+                //为了防止文件最后多一个换行符的问题，我将newline放在写一新的一行的前面，而不是后面。因此需要一个变量记录已经读了几行，因为第0行开始是不需要newline的。
+                int lineRead = 0;
+
+                while (true) {
+                    String line = reader.readLine();
+                    if (line == null) {
+                        break;
+                    }
+                    if (lineRead > 0) {
+                        fOut.newLine();
+                    }
+                    fOut.write(line);
+                    lineRead++;
+                }
+
+                //关闭数据连接与文件流
+                dataSocket.close();
+                dataSocket = null;
+                fOut.close();
+
+            } catch (IOException e) {
+                discardAllOnCommandConnection();
+                throw new FTPClientException(e.getMessage());
+            }
+
+        } else {//Binary模式
+            try {
+                //获得文件输出流
+                BufferedOutputStream fOut = new BufferedOutputStream(new FileOutputStream(destFilename));
+
+                //从server上读取字节流的缓冲区，防止内存爆掉，每次最多读取1MB！
+                byte[] buf = new byte[1024 * 1024];
+
+                //从数据连接获得inputstream
+                InputStream in = dataSocket.getInputStream();
+
+                //读取filemeta
+                FileMeta fileMeta = JSON.parseObject(Utils.readline(in), FileMeta.class);
+
+                //总共已经读取并写入了多少bytes
+                int totalBytesRead = 0;
+
+                while (true) {
+
+                    //这一次读取了多少bytes
+                    int thisBytesRead = in.read(buf);
+
+                    totalBytesRead += thisBytesRead;
+
+                    if (totalBytesRead < fileMeta.size) {
+                        fOut.write(buf, 0, thisBytesRead);
+                    } else if (totalBytesRead >= fileMeta.size) {
+                        fOut.write(buf, 0, thisBytesRead);
+                        break;
+                    }
+
+                }
+
+                //关闭文件输出流
+                fOut.close();
+
+                //如果是非持久连接则关闭
+                if (keepAlive == KeepAlive.F) {
+                    dataSocket.close();
+                    dataSocket = null;
+                }
+
+
+            } catch (IOException e) {
+                discardAllOnCommandConnection();
+                throw new FTPClientException(e.getMessage());
+            }
+        }
+
+        //读取最后的响应
+        try {
+            String response = commandSocketReader.readLine();
+            //检测文件是否传输成功
+            if (!response.startsWith("226")) {
+                discardAllOnCommandConnection();
+                throw new FTPClientException(response);
+            }
+        } catch (IOException e) {
+            discardAllOnCommandConnection();
+            throw new FTPClientException(e.getMessage());
+        }
+    }
+
+    /**
+     * 与服务器建立数据连接
+     *
+     * @return 建立连接是否成功
+     */
+    public boolean buildDataConnection() throws FTPClientException {
+
+        //关闭原先的数据连接
+        try {
+            if (dataSocket != null) {
+                dataSocket.close();
+            }
+        } catch (IOException ignored) {
+        }
+
+
+        if (passiveActive == PassiveActive.ACTIVE) {//主动模式，由客户端来ACCEPT
+            try {
+                this.dataSocket = serverSocket.accept();
+                return true;
+            } catch (IOException e) {
+                discardAllOnCommandConnection();
+                throw new FTPClientException(e.getMessage());
+            }
+
+        } else {//被动模式
+            try {
+                this.dataSocket = new Socket(serverAddress, serverPort);
+                return true;
+            } catch (IOException e) {
+                discardAllOnCommandConnection();
+                throw new FTPClientException(e.getMessage());
+            }
+        }
+
+    }
+
+
+    /**
+     * 设置文件下载到哪个目录
+     *
+     * @param downloadDirectory 文件下载到哪个目录！
+     */
+    public synchronized void setDownloadDirectory(String downloadDirectory) throws FTPClientException {
+        File dir = new File(downloadDirectory);
+        if (!dir.exists()) {
+            throw new FTPClientException("目录不存在！");
+        }
+        if (!dir.isDirectory()) {
+            throw new FTPClientException("不是目录，请选择一个目录！");
+        }
+        this.downloadDirectory = downloadDirectory;
+    }
+
+
+    public String getDownloadDirectory() {
+        return downloadDirectory;
+    }
+
+    /**
      * 在控制连接上写入一行
      *
      * @param line 字符串
@@ -333,4 +618,109 @@ public class MyFTPClientCore {
         commandSocketWriter.flush();
     }
 
+    private void discardAllOnCommandConnection() {
+        try {
+            while (commandSocketReader.ready()) {
+                commandSocketReader.read();
+            }
+        } catch (IOException e) {
+        }
+    }
+
+
+}
+
+class Utils {
+    public static String readline(InputStream in) throws IOException {
+        List<Byte> bytesList = new ArrayList<>();
+        while (true) {
+            byte b = (byte) in.read();
+            if (b == '\n') {
+                break;
+            }
+            bytesList.add(b);
+        }
+        if (bytesList.get(bytesList.size() - 1) == '\r') {
+            bytesList.remove(bytesList.size() - 1);
+        }
+
+        byte[] byteArr = new byte[bytesList.size()];
+        for (int i = 0; i < byteArr.length; i++) {
+            byteArr[i] = bytesList.get(i);
+        }
+
+        String line = new String(byteArr);
+        return line;
+    }
+
+    /**
+     * 在下载文件时，根据LFFR指令获得的服务器上文件名列表，再加上要下载到哪个目录，和要下载的文件夹名，和RETR指令的参数，给出客户机上每个下载文件的绝对路径！
+     *
+     * @param downloadDirectory  下载目录
+     * @param serverFilenameList 服务器上文件名的列表
+     * @param folderName         要下载的文件夹的名字
+     * @return 客户机上每个下载文件存储的绝对路径
+     */
+    public static List<String> getClientFilenames(String downloadDirectory, List<String> serverFilenameList, String folderName, String retrArg) {
+        List<String> clientFilenameList = new ArrayList<>();
+        for (String serverFilename : serverFilenameList
+        ) {
+            String clientFilename =
+                    downloadDirectory +
+                            File.separator +
+                            folderName +
+                            File.separator +
+                            String.join(File.separator, removePrefix(retrArg.split("[/]|[\\\\]"), serverFilename.split("[/]|[\\\\]")));
+            clientFilenameList.add(clientFilename);
+
+        }
+        return clientFilenameList;
+    }
+
+    /**
+     * 给strArr移除掉prefix的前缀，作为list返回
+     *
+     * @param prefix 前缀数组
+     * @param strArr 要操作的字符串数组
+     * @return 去除前缀完成后，以list形式返回
+     */
+    private static List<String> removePrefix(String[] prefix, String[] strArr) {
+        int i = 0;
+        int j = 0;
+        while (i < prefix.length && j < strArr.length) {
+            if (prefix[i].length() == 0) {
+                i++;
+                continue;
+            }
+            if (strArr[j].length() == 0) {
+                j++;
+                continue;
+            }
+            if (Objects.equals(prefix[i], strArr[j])) {
+                i++;
+                j++;
+            } else {
+                break;
+            }
+        }
+        List<String> res = new ArrayList<>();
+        while (j < strArr.length) {
+            res.add(strArr[j]);
+            j++;
+        }
+        return res;
+    }
+
+    public static void createFolders(List<String> clientFilenameList) {
+        HashSet<String> folderNames = new HashSet<>();
+        for (String clientFilename : clientFilenameList
+        ) {
+            int i = clientFilename.lastIndexOf(File.separator);
+            folderNames.add(clientFilename.substring(0, i));
+        }
+        for (String folderName : folderNames
+        ) {
+            boolean success = new File(folderName).mkdirs();
+        }
+    }
 }
