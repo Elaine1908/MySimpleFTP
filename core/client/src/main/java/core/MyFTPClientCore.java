@@ -69,6 +69,7 @@ public class MyFTPClientCore {
     private volatile Socket dataSocket;
 
     private final List<DownloadUploadProgressMonitor> progressMonitors = new ArrayList<>();
+    private volatile boolean monitorOpen = false;
 
 
     /**
@@ -520,8 +521,12 @@ public class MyFTPClientCore {
                         break;
                     }
 
-                    //通知监视器以显示进度
-                    notifyAllProgressMonitors(new DownloadUploadProgressData(fileMeta.filename, fileMeta.size, totalBytesRead, DownloadUploadProgressData.Type.DOWNLOAD));
+                    if (monitorOpen) {
+                        //通知监视器以显示进度
+                        notifyAllProgressMonitors(new DownloadUploadProgressData(fileMeta.filename, fileMeta.size, totalBytesRead, DownloadUploadProgressData.Type.DOWNLOAD));
+                    }
+
+
                 }
 
                 //关闭文件输出流
@@ -644,8 +649,11 @@ public class MyFTPClientCore {
 
                         totalBytesWritten += bytesRead;
 
-                        //通知监视器以显示上传进度
-                        notifyAllProgressMonitors(new DownloadUploadProgressData(filePathOnClientMachine, fileMeta.size, totalBytesWritten, DownloadUploadProgressData.Type.UPLOAD));
+                        if (monitorOpen){
+                            //通知监视器以显示上传进度
+                            notifyAllProgressMonitors(new DownloadUploadProgressData(filePathOnClientMachine, fileMeta.size, totalBytesWritten, DownloadUploadProgressData.Type.UPLOAD));
+
+                        }
                     }
                 } catch (IOException e) {//传输失败，关闭数据连接
                     dataSocket.close();
@@ -811,7 +819,13 @@ public class MyFTPClientCore {
         progressMonitors.forEach(progressMonitor -> progressMonitor.notify(data));
     }
 
+    public boolean isMonitorOpen() {
+        return monitorOpen;
+    }
 
+    public void setMonitorOpen(boolean monitorOpen) {
+        this.monitorOpen = monitorOpen;
+    }
 }
 
 class Utils {

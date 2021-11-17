@@ -9,10 +9,13 @@ public class App {
         boolean loginSuccess = myFTPClientCore.login("test", "test");
         myFTPClientCore.pasv();
         myFTPClientCore.type(MyFTPClientCore.ASCIIBinary.BINARY);
-        myFTPClientCore.kali(MyFTPClientCore.KeepAlive.T);
+        myFTPClientCore.kali(MyFTPClientCore.KeepAlive.F);
         myFTPClientCore.addProgressMonitor(new CommandLineDownloadUploadProgressMonitor());
         myFTPClientCore.setDownloadDirectory("D:\\ftp_download");
-        myFTPClientCore.retrieveSingleFile("one_gigabyte.data");
+        long a = System.nanoTime();
+        myFTPClientCore.retrieveFolder("small_files");
+        long b = System.nanoTime();
+        System.out.println((b - a) / 1000.0 / 1000.0);
 
     }
 
