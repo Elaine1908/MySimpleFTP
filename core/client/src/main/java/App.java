@@ -11,14 +11,13 @@ import java.util.Objects;
 
 public class App {
     public static void main(String[] args) throws Exception {
-//        MyFTPClientCore myFTPClientCore = null;
-//        myFTPClientCore = new MyFTPClientCore("127.0.0.1", 3334);
-//        boolean loginSuccess = myFTPClientCore.login("test", "test");
-//        myFTPClientCore.pasv();
-//        myFTPClientCore.type(MyFTPClientCore.ASCIIBinary.BINARY);
-//        myFTPClientCore.setDownloadDirectory("D:\\ftp_download");
-//        myFTPClientCore.kali(MyFTPClientCore.KeepAlive.T);
-//        myFTPClientCore.storeSingleFile("D:\\huajuanFTP", "咩咩咩");
+        MyFTPClientCore myFTPClientCore = null;
+        myFTPClientCore = new MyFTPClientCore("127.0.0.1", 3334);
+        boolean loginSuccess = myFTPClientCore.login("test", "test");
+        myFTPClientCore.port();
+        myFTPClientCore.type(MyFTPClientCore.ASCIIBinary.BINARY);
+        myFTPClientCore.kali(MyFTPClientCore.KeepAlive.T);
+        myFTPClientCore.storeFolder("D:\\huajuanFTP", "咩咩咩");
 
 
     }

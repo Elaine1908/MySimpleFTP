@@ -25,7 +25,7 @@ public class PORTCommand extends AbstractCommand {
         }
 
         //如果用户传来的东西不含参数......
-        if (commandArg==null){
+        if (commandArg == null) {
             handleUserRequestThread.writeLine(new ArgumentWrongResponse().toString());
             return;
         }
@@ -47,6 +47,9 @@ public class PORTCommand extends AbstractCommand {
         //在thread上设置用户的ip地址及端口！
         handleUserRequestThread.setClientIPAddress(clientIPAddress);
         handleUserRequestThread.setClientPort(clientPort);
+
+        //设置主动模式
+        handleUserRequestThread.setPassiveActive(HandleUserRequestThread.PassiveActive.ACTIVE);
 
         //给用户写入执行成功的响应
         handleUserRequestThread.writeLine(new CommandOKResponse().toString());
