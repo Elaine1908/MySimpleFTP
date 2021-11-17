@@ -1,6 +1,7 @@
 import core.MyFTPClientCore;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 
@@ -12,15 +13,8 @@ public class App {
         myFTPClientCore.pasv();
         myFTPClientCore.type(MyFTPClientCore.ASCIIBinary.BINARY);
         myFTPClientCore.setDownloadDirectory("D:\\ftp_download");
-        myFTPClientCore.kali(MyFTPClientCore.KeepAlive.F);
-//        myFTPClientCore.retrieveSingleFile("one_gigabyte.data");
-//        myFTPClientCore.retrieveSingleFile("one_gigabyte - 副本.data");
-        long a = System.nanoTime();
-        myFTPClientCore.retrieveFolder("small_files");
-        long b = System.nanoTime();
-
-        System.out.println((b - a) / 1000.0 / 1000.0);
-
+        myFTPClientCore.kali(MyFTPClientCore.KeepAlive.T);
+        myFTPClientCore.storeSingleFile("D:\\huajuanFTP", "咩咩咩");
 
     }
 }

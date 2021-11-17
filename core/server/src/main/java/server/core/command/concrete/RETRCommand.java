@@ -72,11 +72,9 @@ public class RETRCommand extends AbstractCommand {
         //准备写数据！
         if (handleUserRequestThread.getAsciiBinary() == HandleUserRequestThread.ASCIIBinary.ASCII) {
             //ASCII模式，强制非持久化连接！
-
-            try {
+            try (Scanner scanner = new Scanner(new File(fileAbsolutePath))) {
 
                 //开Scanner
-                Scanner scanner = new Scanner(new File(fileAbsolutePath));
                 OutputStream out = handleUserRequestThread.getDataSockets().get(0).getOutputStream();
                 while (scanner.hasNext()) {//逐行输出
                     out.write(scanner.nextLine().getBytes(StandardCharsets.UTF_8));
@@ -101,6 +99,7 @@ public class RETRCommand extends AbstractCommand {
             // 创建对应的FileMeta对象
             FileMeta fileMeta = new FileMeta(file.length(), commandArg, FileMeta.Compressed.NOT_COMPRESSED);
 
+            BufferedInputStream fileIn = null;
 
             try {
                 OutputStream outputStream = handleUserRequestThread.getDataSockets().get(0).getOutputStream();
@@ -109,7 +108,7 @@ public class RETRCommand extends AbstractCommand {
                 outputStream.write((JSON.toJSONString(fileMeta) + "\r\n").getBytes(StandardCharsets.UTF_8));
 
                 //读取服务器硬盘上文件的缓冲字节流
-                BufferedInputStream fileIn = new BufferedInputStream(new FileInputStream(fileAbsolutePath));
+                fileIn = new BufferedInputStream(new FileInputStream(fileAbsolutePath));
                 //防止内存爆掉，每次只从带缓冲的字节流中读取1MB文件
                 byte[] buf = new byte[1024 * 1024];
                 while (true) {
@@ -142,6 +141,10 @@ public class RETRCommand extends AbstractCommand {
                 //如果传输失败，无论如何关闭数据连接
                 handleUserRequestThread.getDataSockets().get(0).close();
                 handleUserRequestThread.getDataSockets().clear();
+
+                if (fileIn != null) {
+                    fileIn.close();
+                }
             }
 
         }

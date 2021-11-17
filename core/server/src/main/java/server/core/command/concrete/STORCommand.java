@@ -66,11 +66,12 @@ public class STORCommand extends AbstractCommand {
         //准备写数据！
         if (handleUserRequestThread.getAsciiBinary() == HandleUserRequestThread.ASCIIBinary.ASCII) {
             //ASCII模式，强制非持久化连接！
+            BufferedWriter fOut = null;
             try {
                 //把数据连接的socket的inputstream串联到一个dataReader上
                 BufferedReader dataReader = new BufferedReader(new InputStreamReader(handleUserRequestThread.getDataSockets().get(0).getInputStream()));
                 //创建要保存到文件的bufferedWriter
-                BufferedWriter fOut = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(absoluteFilepath)));
+                fOut = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(absoluteFilepath)));
 
                 //现在已经从数据连接上读取了几行
                 int lineRead = 0;
@@ -92,23 +93,26 @@ public class STORCommand extends AbstractCommand {
                 handleUserRequestThread.writeLine(new TransferSuccessResponse().toString());
 
                 //关闭写文件流
-                fOut.close();
             } catch (IOException e) {
                 handleUserRequestThread.writeLine(new TransferFailedResponse().toString());
             } finally {
                 //无论如何关闭连接
                 handleUserRequestThread.getDataSockets().get(0).close();
                 handleUserRequestThread.getDataSockets().clear();
+                if (fOut != null) {
+                    fOut.close();
+                }
             }
 
 
         } else {//BINARY模式
+            OutputStream fOut = null;
             try {
                 //数据连接上的输入流
                 InputStream dataSocketInputStream = handleUserRequestThread.getDataSockets().get(0).getInputStream();
 
                 //要保存的文件的输出流
-                OutputStream fOut = new BufferedOutputStream(new FileOutputStream(absoluteFilepath));
+                fOut = new BufferedOutputStream(new FileOutputStream(absoluteFilepath));
 
                 //从数据连接上读取一行，反序列化成filemeta
                 FileMeta fileMeta = JSON.parseObject(Utils.readline(dataSocketInputStream), FileMeta.class);
@@ -134,9 +138,6 @@ public class STORCommand extends AbstractCommand {
                 //写传输成功
                 handleUserRequestThread.writeLine(new TransferSuccessResponse().toString());
 
-                //关闭文件流
-                fOut.close();
-
                 //根据是不是keep-alive决定要不要关闭数据连接
                 if ("F".equals(handleUserRequestThread.getKeepAlive())) {
                     try {
@@ -152,6 +153,12 @@ public class STORCommand extends AbstractCommand {
                 //如果传输失败，无论如何关闭数据连接
                 handleUserRequestThread.getDataSockets().get(0).close();
                 handleUserRequestThread.getDataSockets().clear();
+            } finally {
+
+                //在finally里关闭文件流
+                if (fOut != null) {
+                    fOut.close();
+                }
             }
 
         }
@@ -172,12 +179,22 @@ class Utils {
 
     public static String readline(InputStream in) throws IOException {
         List<Byte> bytesList = new ArrayList<>();
+        boolean streamClosed = false;
         while (true) {
-            byte b = (byte) in.read();
+            int x = in.read();
+            //流结束了也应该bread
+            if (x == -1) {
+                streamClosed = true;
+                break;
+            }
+            byte b = (byte) x;
             if (b == '\n') {
                 break;
             }
             bytesList.add(b);
+        }
+        if (streamClosed) {//如果流终止了，就抛出异常
+            throw new IOException();
         }
         if (bytesList.get(bytesList.size() - 1) == '\r') {
             bytesList.remove(bytesList.size() - 1);
