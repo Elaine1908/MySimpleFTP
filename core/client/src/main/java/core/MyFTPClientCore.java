@@ -712,15 +712,22 @@ class Utils {
     }
 
     public static void createFolders(List<String> clientFilenameList) {
-        HashSet<String> folderNames = new HashSet<>();
-        for (String clientFilename : clientFilenameList
-        ) {
-            int i = clientFilename.lastIndexOf(File.separator);
-            folderNames.add(clientFilename.substring(0, i));
-        }
-        for (String folderName : folderNames
-        ) {
-            boolean success = new File(folderName).mkdirs();
+//        HashSet<String> folderNames = new HashSet<>();
+//        for (String clientFilename : clientFilenameList
+//        ) {
+//            int i = clientFilename.lastIndexOf(File.separator);
+//            folderNames.add(clientFilename.substring(0, i));
+//        }
+//        for (String folderName : folderNames
+//        ) {
+//            boolean success = new File(folderName).mkdirs();
+//        }
+        for (String clientFilename : clientFilenameList) {
+            File file = new File(clientFilename).getAbsoluteFile();
+            File parent = file.getParentFile();
+            if (parent != null) {
+                boolean success = parent.mkdirs();
+            }
         }
     }
 }

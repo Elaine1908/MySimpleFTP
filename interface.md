@@ -292,7 +292,23 @@ size：是这个文件的大小。
 
 # 命令：STOR <pathname>
 
-和RETE类似，客户端服务端反一下。注意如果需要上传文件夹，则应该是客户端用一个循环上传每个文件。
+## 参数
+
+pathname: 要把文件上传到服务器的哪个位置（绝对路径）
+
+例：pathname=/hello/folder/三国演义.txt 就把数据连接上代表的文件保存到ftp服务器上的/hello/folder/三国演义.txt文件里
+
+## 传输数据格式
+
+ASCII模式和Binary模式都和RETR模式中一样
+
+## 建立数据连接-流程图
+
+和RETR一样
+
+## 传输数据
+
+和RETR一样
 
 
 
