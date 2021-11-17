@@ -3,6 +3,8 @@ package core;
 import com.alibaba.fastjson.JSON;
 import core.exception.FTPClientException;
 import core.exception.ServerNotFoundException;
+import core.monitor.DownloadUploadProgressMonitor;
+import core.monitor.data.DownloadUploadProgressData;
 import core.transmit.FileMeta;
 
 import java.io.*;
@@ -65,6 +67,8 @@ public class MyFTPClientCore {
 
     //传输数据用的数据连接
     private volatile Socket dataSocket;
+
+    private final List<DownloadUploadProgressMonitor> progressMonitors = new ArrayList<>();
 
 
     /**
@@ -516,6 +520,8 @@ public class MyFTPClientCore {
                         break;
                     }
 
+                    //通知监视器以显示进度
+                    notifyAllProgressMonitors(new DownloadUploadProgressData(fileMeta.filename, fileMeta.size, totalBytesRead, DownloadUploadProgressData.Type.DOWNLOAD));
                 }
 
                 //关闭文件输出流
@@ -623,6 +629,8 @@ public class MyFTPClientCore {
                     //防止内存爆掉，每次都只写1MB
                     byte[] buf = new byte[1024 * 1024];
 
+                    //总共写了多少字节
+                    int totalBytesWritten = 0;
                     while (true) {
                         //把文件读取到buf，记录读了多少字节
                         int bytesRead = fIn.read(buf);
@@ -633,6 +641,11 @@ public class MyFTPClientCore {
                         //写这部分的文件到输出流上
                         outputStream.write(buf, 0, bytesRead);
                         outputStream.flush();
+
+                        totalBytesWritten += bytesRead;
+
+                        //通知监视器以显示上传进度
+                        notifyAllProgressMonitors(new DownloadUploadProgressData(filePathOnClientMachine, fileMeta.size, totalBytesWritten, DownloadUploadProgressData.Type.UPLOAD));
                     }
                 } catch (IOException e) {//传输失败，关闭数据连接
                     dataSocket.close();
@@ -778,6 +791,24 @@ public class MyFTPClientCore {
             }
         } catch (IOException e) {
         }
+    }
+
+    /**
+     * 添加一个进度监视器
+     *
+     * @param progressMonitor 进度监视器
+     */
+    public void addProgressMonitor(DownloadUploadProgressMonitor progressMonitor) {
+        this.progressMonitors.add(progressMonitor);
+    }
+
+    /**
+     * 通知所有的监视器
+     *
+     * @param data 通知用的数据
+     */
+    public void notifyAllProgressMonitors(DownloadUploadProgressData data) {
+        progressMonitors.forEach(progressMonitor -> progressMonitor.notify(data));
     }
 
 
