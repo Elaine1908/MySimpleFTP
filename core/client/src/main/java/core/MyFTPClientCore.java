@@ -6,12 +6,14 @@ import core.exception.ServerNotFoundException;
 import core.monitor.DownloadUploadProgressMonitor;
 import core.monitor.data.DownloadUploadProgressData;
 import core.transmit.FileMeta;
+import lombok.SneakyThrows;
 
 import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * FTP客户端的核心类
@@ -35,8 +37,8 @@ public class MyFTPClientCore {
         ACTIVE
     }
 
-    //默认使用被动模式
-    private volatile PassiveActive passiveActive = PassiveActive.PASSIVE;
+    //主动模式or被动模式
+    private volatile PassiveActive passiveActive = null;
     private volatile String serverAddress;//服务器的地址，被动模式时RETR或者STOR需要连接
     private volatile int serverPort;//服务器的数据连接监听的端口，被动模式时RETR或者STOR需要连接
     private volatile ServerSocket serverSocket;//主动连接时，客户端要在这个socket上监听并accept！
@@ -68,6 +70,10 @@ public class MyFTPClientCore {
     private final List<DownloadUploadProgressMonitor> progressMonitors = new ArrayList<>();
     private volatile boolean monitorOpen = false;
 
+    //用户登录用的用户名和密码
+    private String username;
+    private String password;
+
 
     /**
      * 创建一个FTP客户端的对象
@@ -95,6 +101,8 @@ public class MyFTPClientCore {
      * @return 是否登录成功
      */
     public synchronized boolean login(String username, String password) {
+        this.username = username;
+        this.password = password;
         discardAllOnCommandConnection();
         //尝试登录
         try {
@@ -722,6 +730,97 @@ public class MyFTPClientCore {
         storeFolder(folderNameOnClientMachine, "/");
     }
 
+    public synchronized void storeFolderConcurrently(String folderNameOnClientMachine, String serverFolder) throws FTPClientException {
+        //获得客户机上的文件夹里面所有文件的绝对路径
+        List<String> clientFilenameList = new FilenameGetter().getAllFilenames(folderNameOnClientMachine);
+
+        //获得服务器上的文件名列表
+        List<String> serverFilenameList = Utils.getServerFilenames(serverFolder, clientFilenameList, folderNameOnClientMachine);
+
+        int sz = clientFilenameList.size();
+
+        List<String> clientFilenameListA = clientFilenameList.subList(0, sz / 2);
+        List<String> clientFilenameListB = clientFilenameList.subList(sz / 2, sz);
+        List<String> serverFilenameListA = serverFilenameList.subList(0, sz / 2);
+        List<String> serverFilenameListB = serverFilenameList.subList(sz / 2, sz);
+
+        //如果子线程抛出异常，就放到这个list里，注意使用线程安全的vector
+        List<FTPClientException> exceptionList = new Vector<>();
+
+        //对于上传的任务抽象
+        class StoreFileTask implements Runnable {
+            private final List<String> clientFilenameList;
+            private final List<String> serverFilenameList;
+            private final MyFTPClientCore client;
+
+            public StoreFileTask(MyFTPClientCore myFTPClientCore, List<String> clientFilenameList, List<String> serverFilenameList) {
+                client = myFTPClientCore;
+                this.clientFilenameList = clientFilenameList;
+                this.serverFilenameList = serverFilenameList;
+            }
+
+            @Override
+            public void run() {
+                try {
+                    int i = 0;
+                    int j = 0;
+                    while (i < clientFilenameList.size() && j < serverFilenameList.size()) {
+                        client.storeSingleFileHidden(serverFilenameList.get(j), clientFilenameList.get(i));
+                        i++;
+                        j++;
+                    }
+                } catch (FTPClientException e) {//如果发生异常，就把异常写到异常list里，在主线程里最后抛出
+                    exceptionList.add(e);
+                }
+            }
+        }
+
+        MyFTPClientCore anotherClient;
+        try {
+            anotherClient = cloneClient();
+        } catch (ServerNotFoundException e) {
+            throw new FTPClientException(e.getMessage());
+        }
+
+        //新开一个线程跑后半部分
+        Thread t = new Thread(new StoreFileTask(anotherClient, clientFilenameListB, serverFilenameListB));
+        t.start();
+
+        //在本线程上跑前半部分
+        new StoreFileTask(this, clientFilenameListA, serverFilenameListA).run();
+
+        try {
+            t.join();
+        } catch (InterruptedException ignored) {
+        }
+
+        try {
+            if (anotherClient.dataSocket != null) {
+                anotherClient.dataSocket.close();
+            }
+        } catch (IOException ignored) {
+        }
+
+        try {
+            if (anotherClient.commandSocket != null) {
+                anotherClient.commandSocket.close();
+            }
+        } catch (IOException ignored) {
+        }
+
+        //如果有异常发生就抛出去
+        if (!exceptionList.isEmpty()) {
+            throw exceptionList.get(0);
+        }
+
+
+    }
+
+
+    public synchronized void storeFolderConcurrently(String folderNameOnClientMachine) throws FTPClientException {
+        storeFolderConcurrently(folderNameOnClientMachine, "/");
+    }
+
 
     /**
      * 与服务器建立数据连接
@@ -828,6 +927,49 @@ public class MyFTPClientCore {
     public void setMonitorOpen(boolean monitorOpen) {
         this.monitorOpen = monitorOpen;
     }
+
+    /**
+     * 克隆这个client对象，便于多线程传输
+     *
+     * @return client对象的克隆
+     */
+    public MyFTPClientCore cloneClient() throws ServerNotFoundException, FTPClientException {
+        MyFTPClientCore anotherClient = new MyFTPClientCore(commandSocket.getInetAddress().getHostAddress(), commandSocket.getPort());
+        anotherClient.login(username, password);
+
+        //设置主动模式还是被动模式
+        if (passiveActive == PassiveActive.ACTIVE) {
+            anotherClient.port();
+        } else if (passiveActive == PassiveActive.PASSIVE) {
+            anotherClient.pasv();
+        }
+
+        if (asciiBinary != null) {
+            //设置binary还是ascii
+            anotherClient.type(asciiBinary);
+        }
+
+        if (keepAlive != null) {
+            //设置持久还是非持久
+            anotherClient.kali(keepAlive);
+        }
+
+
+        if (downloadDirectory != null) {
+            //设置下载目录
+            anotherClient.setDownloadDirectory(downloadDirectory);
+        }
+
+        //拷贝监视器
+        progressMonitors.forEach(anotherClient::addProgressMonitor);
+
+        //设置监视器是否打开
+        setMonitorOpen(monitorOpen);
+
+        //返回给用户
+        return anotherClient;
+    }
+
 }
 
 class Utils {
