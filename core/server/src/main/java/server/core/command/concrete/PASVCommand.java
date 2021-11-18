@@ -7,6 +7,7 @@ import server.core.response.concrete.NotLoginResponse;
 import server.core.thread.HandleUserRequestThread;
 
 import java.io.IOException;
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
@@ -88,7 +89,13 @@ class PASVUtils {
                 // 该网卡接口下的ip会有多个，也需要一个个的遍历，找到自己所需要的
                 for (Enumeration<InetAddress> inetAddrs = iface.getInetAddresses(); inetAddrs.hasMoreElements(); ) {
                     InetAddress inetAddr = inetAddrs.nextElement();
-                    // 排除loopback回环类型地址（不管是IPv4还是IPv6 只要是回环地址都会返回true）
+
+                    //排除ipv6地址
+                    if (!(inetAddr instanceof Inet4Address)) {
+                        continue;
+                    }
+
+                    // 排除loopback回环类型地址
                     if (!inetAddr.isLoopbackAddress()) {
                         if (inetAddr.isSiteLocalAddress()) {
                             // 如果是site-local地址，就是它了 就是我们要找的

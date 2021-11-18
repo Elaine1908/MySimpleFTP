@@ -8,10 +8,7 @@ import core.monitor.data.DownloadUploadProgressData;
 import core.transmit.FileMeta;
 
 import java.io.*;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.*;
@@ -152,6 +149,11 @@ public class MyFTPClientCore {
 
             //设置类对象的server_address和host
             serverAddress = sArr[0] + "." + sArr[1] + "." + sArr[2] + "." + sArr[3];
+
+            //傻逼模拟器
+            if (serverAddress.startsWith("10.0.2")) {
+                serverAddress = "127.0.0.1";
+            }
             serverPort = Integer.parseInt(sArr[4]) * 256 + Integer.parseInt(sArr[5]);
 
             //把主动还是被动设成PASSIVE
@@ -460,8 +462,8 @@ public class MyFTPClientCore {
 
         //准备从dataSocket上开始读取了
         if (asciiBinary == ASCIIBinary.ASCII) {//ASCII模式，注意这个模式应该只用于文本文件，否则下载到文件的MD5可能不一致。
-            try {
-                BufferedWriter fOut = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(destFilename)));
+            try (BufferedWriter fOut = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(destFilename)));
+            ) {
 
                 //获得数据连接的reader，逐行读取并写入文件
                 BufferedReader reader = new BufferedReader(new InputStreamReader(dataSocket.getInputStream()));
@@ -491,9 +493,9 @@ public class MyFTPClientCore {
             }
 
         } else {//Binary模式
-            try {
-                //获得文件输出流
-                BufferedOutputStream fOut = new BufferedOutputStream(new FileOutputStream(destFilename));
+            try (//获得文件输出流
+                 BufferedOutputStream fOut = new BufferedOutputStream(new FileOutputStream(destFilename));) {
+
 
                 //从server上读取字节流的缓冲区，防止内存爆掉，每次最多读取1MB！
                 byte[] buf = new byte[1024 * 1024];
@@ -649,7 +651,7 @@ public class MyFTPClientCore {
 
                         totalBytesWritten += bytesRead;
 
-                        if (monitorOpen){
+                        if (monitorOpen) {
                             //通知监视器以显示上传进度
                             notifyAllProgressMonitors(new DownloadUploadProgressData(filePathOnClientMachine, fileMeta.size, totalBytesWritten, DownloadUploadProgressData.Type.UPLOAD));
 
@@ -965,7 +967,13 @@ class Utils {
                 // 该网卡接口下的ip会有多个，也需要一个个的遍历，找到自己所需要的
                 for (Enumeration<InetAddress> inetAddrs = iface.getInetAddresses(); inetAddrs.hasMoreElements(); ) {
                     InetAddress inetAddr = inetAddrs.nextElement();
-                    // 排除loopback回环类型地址（不管是IPv4还是IPv6 只要是回环地址都会返回true）
+
+                    //排除ipv6地址
+                    if (!(inetAddr instanceof Inet4Address)) {
+                        continue;
+                    }
+
+                    // 排除loopback回环类型地址
                     if (!inetAddr.isLoopbackAddress()) {
                         if (inetAddr.isSiteLocalAddress()) {
                             // 如果是site-local地址，就是它了 就是我们要找的

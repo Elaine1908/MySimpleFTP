@@ -99,16 +99,15 @@ public class RETRCommand extends AbstractCommand {
             // 创建对应的FileMeta对象
             FileMeta fileMeta = new FileMeta(file.length(), commandArg, FileMeta.Compressed.NOT_COMPRESSED);
 
-            BufferedInputStream fileIn = null;
 
-            try {
+            try (BufferedInputStream //读取服务器硬盘上文件的缓冲字节流
+                         fileIn = new BufferedInputStream(new FileInputStream(fileAbsolutePath));) {
                 OutputStream outputStream = handleUserRequestThread.getDataSockets().get(0).getOutputStream();
 
                 //在数据连接上写FileMeta
                 outputStream.write((JSON.toJSONString(fileMeta) + "\r\n").getBytes(StandardCharsets.UTF_8));
 
-                //读取服务器硬盘上文件的缓冲字节流
-                fileIn = new BufferedInputStream(new FileInputStream(fileAbsolutePath));
+
                 //防止内存爆掉，每次只从带缓冲的字节流中读取1MB文件
                 byte[] buf = new byte[1024 * 1024];
                 while (true) {
@@ -141,10 +140,6 @@ public class RETRCommand extends AbstractCommand {
                 //如果传输失败，无论如何关闭数据连接
                 handleUserRequestThread.getDataSockets().get(0).close();
                 handleUserRequestThread.getDataSockets().clear();
-
-                if (fileIn != null) {
-                    fileIn.close();
-                }
             }
 
         }
