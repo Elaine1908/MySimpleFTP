@@ -5,6 +5,7 @@ import org.apache.log4j.Logger;
 import server.core.command.AbstractCommand;
 import server.core.command.factory.CommandFactory;
 import server.core.exception.CommandSyntaxWrongException;
+import server.core.logger.FTPServerLogger;
 import server.core.response.concrete.*;
 
 import java.io.*;
@@ -47,8 +48,6 @@ public class HandleUserRequestThread extends Thread {
 
     public final Map<String, String> usernameToPassword;
 
-    private final Logger logger = Logger.getLogger(HandleUserRequestThread.class);//日志记录器
-
 
     private PassiveActive passiveActive;//记录此时是被动模式还是主动模式
 
@@ -63,13 +62,16 @@ public class HandleUserRequestThread extends Thread {
 
     private String keepAlive = "F";//记录现在是使用持久数据连接还是非持久数据连接！
 
+    private FTPServerLogger logger;//日志记录器
+
+    private boolean loggerEnabled;//日志是否启用
+
     /**
      * 在已经accept了用户的连接请求，获得了控制连接后，新建一个处理用户请求的线程！（但不启动它）
      *
      * @param commandSocket 与用户的控制连接
      */
     public HandleUserRequestThread(Socket commandSocket, String rootPath) throws IOException {
-        //BasicConfigurator.configure();
 
         this.commandSocket = commandSocket;
         this.rootPath = rootPath;
@@ -105,7 +107,9 @@ public class HandleUserRequestThread extends Thread {
                 //解析用户输入，获得命令对象
                 AbstractCommand command = CommandFactory.parseCommand(commandLine);
 
-                logger.info(String.format("已收到来自%s的请求%s，准备开始执行%n", commandSocket.getRemoteSocketAddress().toString(), JSON.toJSONString(command)));
+                if (loggerEnabled && logger != null) {
+                    logger.info(String.format("已收到来自%s的请求%s，准备开始执行%n", commandSocket.getRemoteSocketAddress().toString(), JSON.toJSONString(command)));
+                }
 
                 command.execute(this);
 
@@ -116,7 +120,9 @@ public class HandleUserRequestThread extends Thread {
                 }
             } catch (IOException e) {//如果运行到这里，说明连接终端了
                 closeAllConnections();
-                logger.info(String.format("%s已退出", commandSocket));
+                if (loggerEnabled && logger != null) {
+                    logger.info(String.format("%s已退出", commandSocket));
+                }
                 break;
             }
         }
@@ -290,5 +296,21 @@ public class HandleUserRequestThread extends Thread {
 
     public void setKeepAlive(String keepAlive) {
         this.keepAlive = keepAlive;
+    }
+
+    public FTPServerLogger getLogger() {
+        return logger;
+    }
+
+    public void setLogger(FTPServerLogger logger) {
+        this.logger = logger;
+    }
+
+    public boolean isLoggerEnabled() {
+        return loggerEnabled;
+    }
+
+    public void setLoggerEnabled(boolean loggerEnabled) {
+        this.loggerEnabled = loggerEnabled;
     }
 }
