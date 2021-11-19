@@ -7,9 +7,9 @@ import java.net.Socket;
 public class App {
     public static void main(String[] args) throws Exception {
         MyFTPClientCore myFTPClientCore = null;
-        myFTPClientCore = new MyFTPClientCore("192.168.0.108", 7777);
+        myFTPClientCore = new MyFTPClientCore("172.20.10.5", 4444);
         boolean loginSuccess = myFTPClientCore.login("test", "test");
-        //myFTPClientCore.pasv();
+        myFTPClientCore.pasv();
         myFTPClientCore.type(MyFTPClientCore.ASCIIBinary.BINARY);
         myFTPClientCore.kali(MyFTPClientCore.KeepAlive.F);
         myFTPClientCore.addProgressMonitor(new CommandLineDownloadUploadProgressMonitor());

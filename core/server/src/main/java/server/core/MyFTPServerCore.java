@@ -1,10 +1,12 @@
 package server.core;
 
+import server.core.logger.FTPServerLogger;
 import server.core.thread.ListeningThread;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.rmi.ServerException;
 
 /**
  * 简单的FTP服务器的Server的核心类
@@ -27,6 +29,10 @@ public class MyFTPServerCore {
      * @param rootPath   FTP服务器的根目录
      */
     public MyFTPServerCore(int listenPort, String rootPath) throws IOException {
+        this(listenPort, rootPath, null);
+    }
+
+    public MyFTPServerCore(int listenPort, String rootPath, FTPServerLogger logger) throws IOException {
         this.listenPort = listenPort;
         this.rootPath = rootPath;
 
@@ -39,7 +45,7 @@ public class MyFTPServerCore {
         serverSocket = new ServerSocket(listenPort);
 
         //主线程对象
-        listeningThread = new ListeningThread(serverSocket, rootPath);
+        listeningThread = new ListeningThread(serverSocket, rootPath, logger);
     }
 
 
