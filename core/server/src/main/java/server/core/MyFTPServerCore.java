@@ -6,7 +6,6 @@ import server.core.thread.ListeningThread;
 import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.rmi.ServerException;
 
 /**
  * 简单的FTP服务器的Server的核心类

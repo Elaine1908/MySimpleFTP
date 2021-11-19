@@ -1,6 +1,7 @@
 package server.core.command.concrete;
 
 import com.alibaba.fastjson.JSON;
+
 import server.core.command.AbstractCommand;
 import server.core.response.concrete.*;
 import server.core.thread.HandleUserRequestThread;
@@ -123,9 +124,11 @@ public class STORCommand extends AbstractCommand {
                 //总共读取了多少字节
                 int totalBytesRead = 0;
 
-                while (true) {
+                //如果文件的size是0，就直接不从流上读取，客户端也从来不在流上写数据
+                while (fileMeta.size > 0) {
                     //这次读取了多少字节
                     int thisBytesRead = dataSocketInputStream.read(buf);
+
                     if (thisBytesRead == -1) {
                         throw new IOException("流在传输过程中关闭");
                     }

@@ -168,7 +168,7 @@ public class MyFTPClientCore {
             passiveActive = PassiveActive.PASSIVE;
         } catch (IOException e) {
             discardAllOnCommandConnection();
-            throw new FTPClientException(e.getMessage());
+            throw new FTPClientException(e);
         }
     }
 
@@ -235,7 +235,7 @@ public class MyFTPClientCore {
 
         } catch (IOException e) {
             discardAllOnCommandConnection();
-            throw new FTPClientException(e.getMessage());
+            throw new FTPClientException(e);
         }
 
     }
@@ -253,7 +253,7 @@ public class MyFTPClientCore {
             writeLine(line);
         } catch (IOException e) {
             discardAllOnCommandConnection();
-            throw new FTPClientException(e.getMessage());
+            throw new FTPClientException(e);
         }
 
         //读取服务器响应
@@ -262,7 +262,7 @@ public class MyFTPClientCore {
             response = commandSocketReader.readLine();
         } catch (IOException e) {
             discardAllOnCommandConnection();
-            throw new FTPClientException(e.getMessage());
+            throw new FTPClientException(e);
         }
 
         //如果服务器传来的响应不成功
@@ -288,7 +288,7 @@ public class MyFTPClientCore {
             writeLine(line);
         } catch (IOException e) {
             discardAllOnCommandConnection();
-            throw new FTPClientException(e.getMessage());
+            throw new FTPClientException(e);
         }
 
         //读取服务器响应
@@ -297,7 +297,7 @@ public class MyFTPClientCore {
             response = commandSocketReader.readLine();
         } catch (IOException e) {
             discardAllOnCommandConnection();
-            throw new FTPClientException(e.getMessage());
+            throw new FTPClientException(e);
         }
 
         //如果服务器传来的响应不成功
@@ -326,7 +326,7 @@ public class MyFTPClientCore {
             writeLine(line);
         } catch (IOException e) {
             discardAllOnCommandConnection();
-            throw new FTPClientException(e.getMessage());
+            throw new FTPClientException(e);
         }
 
         //读取服务器的请求
@@ -335,7 +335,7 @@ public class MyFTPClientCore {
             response = commandSocketReader.readLine();
         } catch (IOException e) {
             discardAllOnCommandConnection();
-            throw new FTPClientException(e.getMessage());
+            throw new FTPClientException(e);
         }
 
         if (response == null || !response.startsWith("200")) {
@@ -363,22 +363,22 @@ public class MyFTPClientCore {
     }
 
     /**
-     * 向服务器发送RETR命令 获取一个文件夹
+     * 向服务器发送命令，获取一个文件夹
      *
-     * @param arg RETR命令的参数
+     * @param folderAbsPathOnServer 文件在服务器上的绝对路径
      */
-    public synchronized void retrieveFolder(String arg) throws FTPClientException {
+    public synchronized void retrieveFolder(String folderAbsPathOnServer) throws FTPClientException {
         try {
-            String[] arr = arg.split("[/]|[\\\\]");
+            String[] arr = folderAbsPathOnServer.split("[/]|[\\\\]");
 
             //文件夹的名字
             String folderName = arr[arr.length - 1];
 
             //先用LFFR指令获得所有文件的列表
-            List<String> serverFilenameList = lffr(arg);
+            List<String> serverFilenameList = lffr(folderAbsPathOnServer);
 
             //计算出每个文件在client上存放的物理位置
-            List<String> clientFilenameList = Utils.getClientFilenames(downloadDirectory, serverFilenameList, folderName, arg);
+            List<String> clientFilenameList = Utils.getClientFilenames(downloadDirectory, serverFilenameList, folderName, folderAbsPathOnServer);
 
             //创建必要的文件夹
             Utils.createFolders(clientFilenameList);
@@ -394,9 +394,106 @@ public class MyFTPClientCore {
 
         } catch (Exception e) {
             discardAllOnCommandConnection();
-            throw new FTPClientException(e.getMessage());
+            throw new FTPClientException(e);
         }
     }
+
+    /**
+     * 向服务器发送命令，并发地获取一个文件夹
+     *
+     * @param folderAbsPathOnServer 文件在服务器上的绝对路径
+     */
+    public synchronized void retrieveFolderConcurrently(String folderAbsPathOnServer) throws FTPClientException {
+        try {
+            //克隆一个client对象
+            MyFTPClientCore anotherClient;
+            try {
+                anotherClient = cloneClient();
+            } catch (ServerNotFoundException e) {
+                throw new FTPClientException(e);
+            }
+
+            String[] arr = folderAbsPathOnServer.split("[/]|[\\\\]");
+
+            //文件夹的名字
+            String folderName = arr[arr.length - 1];
+
+            //先用LFFR指令获得所有文件的列表
+            List<String> serverFilenameList = lffr(folderAbsPathOnServer);
+
+            //计算出每个文件在client上存放的物理位置
+            List<String> clientFilenameList = Utils.getClientFilenames(downloadDirectory, serverFilenameList, folderName, folderAbsPathOnServer);
+
+            //创建必要的文件夹
+            Utils.createFolders(clientFilenameList);
+
+            int sz = serverFilenameList.size();
+            List<String> serverFilenameListA = serverFilenameList.subList(0, sz / 2);
+            List<String> serverFilenameListB = serverFilenameList.subList(sz / 2, sz);
+            List<String> clientFilenameListA = clientFilenameList.subList(0, sz / 2);
+            List<String> clientFilenameListB = clientFilenameList.subList(sz / 2, sz);
+
+            //异常列表，如果有并发的线程抛出了异常，就把异常放入这个列表中
+            List<FTPClientException> exceptionList = new Vector<>();
+
+            class DownloadTask implements Runnable {
+
+                final List<String> serverFilenameList;
+                final List<String> clientFilenameList;
+                final MyFTPClientCore clientCore;
+
+                public DownloadTask(List<String> serverFilenameList, List<String> clientFilenameList, MyFTPClientCore clientCore) {
+                    this.serverFilenameList = serverFilenameList;
+                    this.clientFilenameList = clientFilenameList;
+                    this.clientCore = clientCore;
+                }
+
+                @Override
+                public void run() {
+
+                    try {
+                        //从服务器上一一下载文件
+                        int i = 0;
+                        int j = 0;
+                        while (i < this.serverFilenameList.size() && j < this.clientFilenameList.size()) {
+                            clientCore.retrieveSingleFileHidden(this.serverFilenameList.get(i), this.clientFilenameList.get(j));
+                            i++;
+                            j++;
+                        }
+                    } catch (FTPClientException e) {
+                        exceptionList.add(e);
+                    }
+
+                }
+            }
+
+            //开一个新线程，下载第二部分
+            Thread t = new Thread(new DownloadTask(serverFilenameListB, clientFilenameListB, anotherClient));
+            //线程启动
+            t.start();
+
+            //在原先的线程上下载第一部分
+            new DownloadTask(serverFilenameListA, clientFilenameListA, this).run();
+            try {
+                t.join();
+            } catch (InterruptedException ignored) {
+            }
+
+            //下载完了，关闭掉新开的client
+            anotherClient.close();
+
+            //如果有异常就抛出
+            if (!exceptionList.isEmpty()) {
+                throw exceptionList.get(0);
+            }
+
+
+        } catch (FTPClientException e) {
+            discardAllOnCommandConnection();
+            throw new FTPClientException(e);
+        }
+    }
+
 
     /**
      * 向服务器发送RETR命令 获取一个文件
@@ -417,6 +514,7 @@ public class MyFTPClientCore {
         retrieveSingleFileHidden(arg, destFilename);
     }
 
+
     /**
      * 根据文件名，下载服务器上的一个文件到指定的文件名上。
      *
@@ -430,7 +528,7 @@ public class MyFTPClientCore {
             writeLine(String.format("RETR %s", arg));
         } catch (IOException e) {
             discardAllOnCommandConnection();
-            throw new FTPClientException(e.getMessage());
+            throw new FTPClientException(e);
         }
 
         //先读取服务端的响应是不是200OK
@@ -442,7 +540,7 @@ public class MyFTPClientCore {
             }
         } catch (IOException e) {
             discardAllOnCommandConnection();
-            throw new FTPClientException(e.getMessage());
+            throw new FTPClientException(e);
         }
 
 
@@ -464,7 +562,7 @@ public class MyFTPClientCore {
             }
         } catch (IOException e) {
             discardAllOnCommandConnection();
-            throw new FTPClientException(e.getMessage());
+            throw new FTPClientException(e);
         }
 
 
@@ -497,7 +595,7 @@ public class MyFTPClientCore {
                 fOut.close();
 
             } catch (IOException e) {
-                throw new FTPClientException(e.getMessage());
+                throw new FTPClientException(e);
             }
 
         } else {//Binary模式
@@ -517,7 +615,8 @@ public class MyFTPClientCore {
                 //总共已经读取并写入了多少bytes
                 int totalBytesRead = 0;
 
-                while (true) {
+                //如果文件的size为0，则直接不从流上读数据，零一端也没有在流上写数据
+                while (fileMeta.size > 0) {
 
                     //这一次读取了多少bytes
                     int thisBytesRead = in.read(buf);
@@ -549,7 +648,7 @@ public class MyFTPClientCore {
                 }
 
             } catch (IOException e) {
-                throw new FTPClientException(e.getMessage());
+                throw new FTPClientException(e);
             }
         }
 
@@ -563,7 +662,7 @@ public class MyFTPClientCore {
             }
         } catch (IOException e) {
             discardAllOnCommandConnection();
-            throw new FTPClientException(e.getMessage());
+            throw new FTPClientException(e);
         }
     }
 
@@ -681,11 +780,12 @@ public class MyFTPClientCore {
                     throw new FTPClientException(response);
                 }
 
+
             }
 
         } catch (Exception e) {
             discardAllOnCommandConnection();
-            throw new FTPClientException(e.getMessage());
+            throw new FTPClientException(e);
         }
     }
 
@@ -779,7 +879,7 @@ public class MyFTPClientCore {
         try {
             anotherClient = cloneClient();
         } catch (ServerNotFoundException e) {
-            throw new FTPClientException(e.getMessage());
+            throw new FTPClientException(e);
         }
 
         //新开一个线程跑后半部分
@@ -794,19 +894,8 @@ public class MyFTPClientCore {
         } catch (InterruptedException ignored) {
         }
 
-        try {
-            if (anotherClient.dataSocket != null) {
-                anotherClient.dataSocket.close();
-            }
-        } catch (IOException ignored) {
-        }
-
-        try {
-            if (anotherClient.commandSocket != null) {
-                anotherClient.commandSocket.close();
-            }
-        } catch (IOException ignored) {
-        }
+        //关闭新开的client
+        anotherClient.close();
 
         //如果有异常发生就抛出去
         if (!exceptionList.isEmpty()) {
@@ -844,7 +933,7 @@ public class MyFTPClientCore {
                 return true;
             } catch (IOException e) {
                 discardAllOnCommandConnection();
-                throw new FTPClientException(e.getMessage());
+                throw new FTPClientException(e);
             }
 
         } else {//被动模式
@@ -853,7 +942,7 @@ public class MyFTPClientCore {
                 return true;
             } catch (IOException e) {
                 discardAllOnCommandConnection();
-                throw new FTPClientException(e.getMessage());
+                throw new FTPClientException(e);
             }
         }
 
@@ -970,6 +1059,22 @@ public class MyFTPClientCore {
         return anotherClient;
     }
 
+    public void close() {
+        try {
+            if (this.dataSocket != null) {
+                this.dataSocket.close();
+            }
+        } catch (IOException ignored) {
+        }
+
+        try {
+            if (this.commandSocket != null) {
+                this.commandSocket.close();
+            }
+        } catch (IOException ignored) {
+        }
+    }
+
 }
 
 class Utils {
@@ -1012,7 +1117,7 @@ class Utils {
      * @param folderName         要下载的文件夹的名字
      * @return 客户机上每个下载文件存储的绝对路径
      */
-    public static List<String> getClientFilenames(String downloadDirectory, List<String> serverFilenameList, String folderName, String retrArg) {
+    public static List<String> getClientFilenames(String downloadDirectory, List<String> serverFilenameList, String folderName, String folderAbsPathOnServer) {
         List<String> clientFilenameList = new ArrayList<>();
         for (String serverFilename : serverFilenameList
         ) {
@@ -1021,7 +1126,7 @@ class Utils {
                             File.separator +
                             folderName +
                             File.separator +
-                            String.join(File.separator, removePrefix(retrArg.split("[/]|[\\\\]"), serverFilename.split("[/]|[\\\\]")));
+                            String.join(File.separator, removePrefix(folderAbsPathOnServer.split("[/]|[\\\\]"), serverFilename.split("[/]|[\\\\]")));
             clientFilenameList.add(clientFilename);
 
         }
@@ -1137,6 +1242,10 @@ class Utils {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    public void close() {
+
     }
 
 

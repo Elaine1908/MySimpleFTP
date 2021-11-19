@@ -7,7 +7,7 @@ import java.net.Socket;
 public class App {
     public static void main(String[] args) throws Exception {
         MyFTPClientCore myFTPClientCore = null;
-        myFTPClientCore = new MyFTPClientCore("172.20.10.5", 4444);
+        myFTPClientCore = new MyFTPClientCore("192.168.0.108", 6666);
         boolean loginSuccess = myFTPClientCore.login("test", "test");
         myFTPClientCore.pasv();
         myFTPClientCore.type(MyFTPClientCore.ASCIIBinary.BINARY);
@@ -15,7 +15,7 @@ public class App {
         myFTPClientCore.addProgressMonitor(new CommandLineDownloadUploadProgressMonitor());
         myFTPClientCore.setDownloadDirectory("D:\\ftp_download");
         long a = System.nanoTime();
-        myFTPClientCore.storeFolderConcurrently("D:\\nano_files");
+        myFTPClientCore.retrieveSingleFile("zero.txt");
         long b = System.nanoTime();
         System.out.println((b - a) / 1000.0 / 1000.0);
 

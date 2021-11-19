@@ -7,4 +7,8 @@ public class FTPClientException extends Exception{
     public FTPClientException(String message) {
         super(message);
     }
+
+    public FTPClientException(Throwable cause) {
+        super(cause);
+    }
 }
