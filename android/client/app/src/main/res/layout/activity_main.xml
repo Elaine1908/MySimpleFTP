@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+
+    <!-- 单选按钮放在radio group中保证只能二选一-->
+
+    <TextView
+        android:id="@+id/textView3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="FTP Client @ Elaine"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintHorizontal_bias="0.482"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.965" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:paddingTop="100dp"
+        >
+        <EditText
+            android:id="@+id/username"
+            android:layout_width="135dp"
+            android:layout_height="50dp"
+            android:ems="10"
+            android:layout_marginLeft="5dp"
+            android:hint=" username"
+            android:inputType="textPersonName" />
+
+        <EditText
+            android:id="@+id/password"
+            android:layout_width="135dp"
+            android:layout_height="50dp"
+            android:ems="10"
+            android:hint=" password"
+            android:layout_marginRight="5dp"
+            android:inputType="textPassword" />
+
+        <Button
+            android:id="@+id/login"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_marginTop="-6dp"
+            android:text="登录"
+            />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:paddingTop="50dp"
+        >
+        <EditText
+            android:id="@+id/hostnum"
+            android:layout_width="135dp"
+            android:layout_height="50dp"
+            android:ems="10"
+            android:hint=" host"
+            android:layout_marginLeft="5dp"
+            android:inputType="textPersonName" />
+
+
+        <EditText
+            android:id="@+id/portnum"
+            android:layout_width="135dp"
+            android:layout_height="50dp"
+            android:layout_marginRight="5dp"
+            android:ems="10"
+            android:hint=" port"
+            android:inputType="textPersonName" />
+
+        <Button
+            android:id="@+id/connect"
+            android:layout_width="wrap_content"
+            android:layout_height="50dp"
+            android:layout_marginTop="-6dp"
+            android:text="连接"/>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="left"
+        android:paddingTop="180dp"
+        android:paddingLeft="15dp">
+        <Button
+            android:id="@+id/pasv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="被动模式" />
+
+        <Button
+            android:id="@+id/port"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="主动模式" />
+
+        <Switch
+            android:id="@+id/kali"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:text="keep alive" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="right"
+        android:paddingTop="180dp"
+        android:paddingRight="15dp">
+        <TextView
+            android:id="@+id/textView2"
+            android:layout_width="54dp"
+            android:layout_height="30dp"
+            android:layout_marginRight="80dp"
+            android:text="Type :" />
+
+        <RadioGroup
+            android:id="@+id/type"
+            android:layout_width="140dp"
+            android:layout_height="90dp"
+            >
+
+            <RadioButton
+                android:id="@+id/ascii"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="ascii" />
+
+            <RadioButton
+                android:id="@+id/binary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="binary" />
+        </RadioGroup>
+
+
+
+    </LinearLayout>
+
+
+
+
+
+
+    <LinearLayout
+        android:id="@+id/linearLayout_retr"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingBottom="100dp"
+        android:orientation="horizontal"
+        android:gravity="bottom">
+        <Button
+            android:id="@+id/retr_file"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginLeft="5dp"
+            android:text="下载文件" />
+
+        <Button
+            android:id="@+id/retr_folder"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginRight="5dp"
+            android:layout_marginLeft="5dp"
+            android:text="下载文件夹" />
+
+        <Button
+            android:id="@+id/multithread_retr"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginRight="5dp"
+            android:text="多线程下载" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/linearLayout_stor"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingBottom="50dp"
+        android:orientation="horizontal"
+        android:gravity="bottom"
+        app:layout_constraintTop_toBottomOf="@id/linearLayout_retr">
+
+        <Button
+            android:id="@+id/stor_file"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginLeft="5dp"
+            android:text="上传文件" />
+
+        <Button
+            android:id="@+id/stor_folder"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginRight="5dp"
+            android:layout_marginLeft="5dp"
+            android:text="上传文件夹" />
+
+        <Button
+            android:id="@+id/multithread_stor"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginRight="5dp"
+            android:text="多线程上传" />
+    </LinearLayout>
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>
