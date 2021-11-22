@@ -1,5 +1,6 @@
 package com.example.test;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
@@ -19,11 +20,13 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Optional;
 import java.util.Vector;
 
 import core.MyFTPClientCore;
 import core.exception.FTPClientException;
 import core.exception.ServerNotFoundException;
+import utils.DialogUtil;
 import utils.ToastUtil;
 
 public class MainActivity extends AppCompatActivity {
@@ -49,6 +52,9 @@ public class MainActivity extends AppCompatActivity {
     private boolean loggedin = false;//用户是否已登录
     private boolean passiveActive = false;//是否确认模式
 
+
+    private String downloadPath;//文件下载到哪个目录
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -58,11 +64,14 @@ public class MainActivity extends AppCompatActivity {
         StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().build());
         StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().build());
 
-        setTitle("FTP Client");
+        setTitle("FTP客户端" + getLocalHostExactAddress());
 
         //找到所有的view，赋值给此类的静态变量
         findAllViews();
 
+        //获取下载目录
+        downloadPath = getApplicationContext().getExternalFilesDir("ftp_download").getAbsolutePath();
+        DialogUtil.simpleAlert(this, "下载目录", downloadPath);
 
         type.setOnCheckedChangeListener((radioGroup, i) -> {
 

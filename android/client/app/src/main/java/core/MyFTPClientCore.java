@@ -1,6 +1,7 @@
 package core;
 
 import com.alibaba.fastjson.JSON;
+
 import core.exception.FTPClientException;
 import core.exception.ServerNotFoundException;
 import core.monitor.DownloadUploadProgressMonitor;
@@ -1071,6 +1072,18 @@ public class MyFTPClientCore {
             if (this.commandSocket != null) {
                 this.commandSocket.close();
             }
+        } catch (IOException ignored) {
+        }
+    }
+
+    /**
+     * quit命令
+     */
+    public void quit() {
+        try {
+            writeLine("QUIT");
+            String rsp = commandSocketReader.readLine();
+            this.close();
         } catch (IOException ignored) {
         }
     }

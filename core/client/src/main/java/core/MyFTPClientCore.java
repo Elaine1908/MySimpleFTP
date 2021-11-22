@@ -1075,6 +1075,18 @@ public class MyFTPClientCore {
         }
     }
 
+    /**
+     * quit命令
+     */
+    public void quit() {
+        try {
+            writeLine("QUIT");
+            String rsp = commandSocketReader.readLine();
+            this.close();
+        } catch (IOException ignored) {
+        }
+    }
+
 }
 
 class Utils {
@@ -1242,10 +1254,6 @@ class Utils {
         } catch (Exception e) {
             return null;
         }
-    }
-
-    public void close() {
-
     }
 
 
