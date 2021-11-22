@@ -24,6 +24,7 @@ import java.util.Vector;
 import core.MyFTPClientCore;
 import core.exception.FTPClientException;
 import core.exception.ServerNotFoundException;
+import utils.ToastUtil;
 
 public class MainActivity extends AppCompatActivity {
     private Button login;
@@ -62,158 +63,168 @@ public class MainActivity extends AppCompatActivity {
         //找到所有的view，赋值给此类的静态变量
         findAllViews();
 
-//        //日志的绝对路径
-//        logPath = getApplicationContext().getExternalFilesDir(null) + File.separator + "log.txt";
 
+        type.setOnCheckedChangeListener((radioGroup, i) -> {
 
-        type.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-            List<Exception> exceptionList = new Vector<>();
-            @Override
-            public void onCheckedChanged(RadioGroup radioGroup, int i) {
-                if(loggedin){
-                    RadioButton r = (RadioButton) findViewById(i);
-                    //Toast.makeText(MainActivity.this,"type:"+r.getText(),Toast.LENGTH_SHORT).show();
-                    if(r.getText().equals("ascii")){
-                        try {
-                            myFTPClientCore.type(MyFTPClientCore.ASCIIBinary.ASCII);
-                            Toast.makeText(MainActivity.this,"type : ascii",Toast.LENGTH_SHORT).show();
-                        } catch (FTPClientException e) {
-                            exceptionList.add(e);
-                            e.printStackTrace();
-                        }
-                    }else {
-                        try {
-                            myFTPClientCore.type(MyFTPClientCore.ASCIIBinary.BINARY);
-                            Toast.makeText(MainActivity.this,"type : binary",Toast.LENGTH_SHORT).show();
-                        } catch (FTPClientException e) {
-                            exceptionList.add(e);
-                            e.printStackTrace();
-                        }
-                    }
-                    if (exceptionList.size() != 0) {
-                        Toast.makeText(getApplicationContext(), "error occurred in setting type!", Toast.LENGTH_LONG).show();
-                    }
-                }else {
-                    Toast.makeText(MainActivity.this,"尚未登录",Toast.LENGTH_SHORT).show();
+            if (!connected) {
+                ToastUtil.showToast(MainActivity.this, "尚未连接", Toast.LENGTH_SHORT);
+                return;
+            }
+            if (!loggedin) {
+                ToastUtil.showToast(MainActivity.this, "尚未登录", Toast.LENGTH_SHORT);
+                return;
+            }
+
+            RadioButton r = (RadioButton) findViewById(i);
+
+            if (r == ascii) {
+                try {
+                    myFTPClientCore.type(MyFTPClientCore.ASCIIBinary.ASCII);
+                    ToastUtil.showToast(MainActivity.this, "TYPE : ASCII", Toast.LENGTH_SHORT);
+                } catch (FTPClientException e) {
+                    ToastUtil.showToast(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT);
+                    e.printStackTrace();
+                }
+            } else if (r == binary) {
+                try {
+                    myFTPClientCore.type(MyFTPClientCore.ASCIIBinary.BINARY);
+                    ToastUtil.showToast(MainActivity.this, "TYPE : BINARY", Toast.LENGTH_SHORT);
+                } catch (FTPClientException e) {
+                    ToastUtil.showToast(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT);
+                    e.printStackTrace();
                 }
             }
         });
 
-        kali.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                if(!loggedin){
-                    Toast.makeText(MainActivity.this,"尚未登录",Toast.LENGTH_SHORT).show();
-                }else{
-                    if(b){
-                        try {
-                            myFTPClientCore.kali(MyFTPClientCore.KeepAlive.T);
-                        } catch (FTPClientException e) {
-                            e.printStackTrace();
-                        }
-                    }else {
-                        try {
-                            myFTPClientCore.kali(MyFTPClientCore.KeepAlive.F);
-                        } catch (FTPClientException e) {
-                            e.printStackTrace();
-                        }
-                    }
+
+        kali.setOnCheckedChangeListener((compoundButton, b) -> {
+            if (!connected) {
+                ToastUtil.showToast(MainActivity.this, "尚未连接", Toast.LENGTH_SHORT);
+                //把checked状态换回去！
+                compoundButton.setChecked(!b);
+                return;
+            }
+            if (!loggedin) {
+                ToastUtil.showToast(MainActivity.this, "尚未登录", Toast.LENGTH_SHORT);
+                compoundButton.setChecked(!b);
+                return;
+            }
+            if (b) {
+                try {
+                    myFTPClientCore.kali(MyFTPClientCore.KeepAlive.T);
+                } catch (FTPClientException e) {
+                    ToastUtil.showToast(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT);
+                    e.printStackTrace();
                 }
+            } else {
+                try {
+                    myFTPClientCore.kali(MyFTPClientCore.KeepAlive.F);
+                } catch (FTPClientException e) {
+                    ToastUtil.showToast(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT);
+                    e.printStackTrace();
+                }
+            }
+
+        });
+
+        pasv.setOnClickListener(v -> {
+            if (!connected) {
+                ToastUtil.showToast(MainActivity.this, "尚未连接", Toast.LENGTH_SHORT);
+                return;
+            }
+
+            if (!loggedin) {
+                ToastUtil.showToast(MainActivity.this, "尚未登录", Toast.LENGTH_SHORT);
+                return;
+            }
+            try {
+                myFTPClientCore.pasv();
+                passiveActive = true;
+                ToastUtil.showToast(MainActivity.this, "成功进入被动模式", Toast.LENGTH_SHORT);
+            } catch (FTPClientException e) {
+                ToastUtil.showToast(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT);
+                e.printStackTrace();
             }
         });
 
-        pasv.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (!loggedin) {
-                    Toast.makeText(MainActivity.this, "尚未登录", Toast.LENGTH_SHORT).show();
-                } else {
-                    try {
-                        myFTPClientCore.pasv();
-                        passiveActive = true;
-                        Toast.makeText(MainActivity.this, "passive mode", Toast.LENGTH_SHORT).show();
-                    } catch (FTPClientException e) {
-                        e.printStackTrace();
-                    }
-                }
+        port.setOnClickListener(v -> {
+
+            if (!connected) {
+                ToastUtil.showToast(MainActivity.this, "尚未连接", Toast.LENGTH_SHORT);
+                return;
+            }
+
+            if (!loggedin) {
+                ToastUtil.showToast(MainActivity.this, "尚未登录", Toast.LENGTH_SHORT);
+                return;
+            }
+            try {
+                myFTPClientCore.port();
+                passiveActive = true;
+                ToastUtil.showToast(MainActivity.this, "成功进入主动模式", Toast.LENGTH_SHORT);
+            } catch (FTPClientException e) {
+                ToastUtil.showToast(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT);
+                e.printStackTrace();
             }
         });
 
-        port.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (!loggedin) {
-                    Toast.makeText(MainActivity.this, "尚未登录", Toast.LENGTH_SHORT).show();
-                } else {
-                    try {
-                        myFTPClientCore.port();
-                        passiveActive = true;
-                        Toast.makeText(MainActivity.this, "active mode", Toast.LENGTH_SHORT).show();
-                    } catch (FTPClientException e) {
-                        e.printStackTrace();
-                    }
-                }
+        connect.setOnClickListener(v -> {
+
+            if (myFTPClientCore != null) {//如果原先还有客户端对象，就关闭掉旧的客户端对象
+                myFTPClientCore.close();
+            }
+
+            //根据服务器主机名和端口号进行连接
+            String host = hostnum.getText().toString();
+            String port = portnum.getText().toString();
+
+            //检测主机号和端口名是否为null
+            if (host.length() == 0 || port.length() == 0) {
+                ToastUtil.showToast(MainActivity.this, "请输入主机号和端口名", Toast.LENGTH_SHORT);
+                return;
+            }
+
+            if (!isNum(port)) {
+                ToastUtil.showToast(MainActivity.this, "端口号为2048-65536的数字", Toast.LENGTH_SHORT);
+                return;
+            }
+
+            int port_num = Integer.parseInt(port);
+            if (!(port_num >= 2048 && port_num <= 65536)) {
+                ToastUtil.showToast(MainActivity.this, "端口必须在2048和65536之间", Toast.LENGTH_LONG);
+                return;
+            }
+
+
+            try {
+                myFTPClientCore = new MyFTPClientCore(host, port_num);
+                connected = true;
+                ToastUtil.showToast(MainActivity.this, "连接成功", Toast.LENGTH_LONG);
+            } catch (ServerNotFoundException e) {
+                connected = false;
+                ToastUtil.showToast(MainActivity.this, e.getMessage(), Toast.LENGTH_LONG);
+
             }
         });
 
-        connect.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if(connected){
-                    Toast.makeText(MainActivity.this,"请断开连接后重试",Toast.LENGTH_SHORT).show();
-                }else {
-                    //根据服务器主机名和端口号进行连接
-                    String host = hostnum.getText().toString();
-                    String port = portnum.getText().toString();
-                    if(host.length() == 0 || port.length() == 0 ){
-                        Toast.makeText(MainActivity.this,"请输入主机号和端口名",Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    else if(!isNum(port)){
-                        Toast.makeText(MainActivity.this,"端口号为2048-65536的数字",Toast.LENGTH_SHORT).show();
-                    }else {
-                        int port_num = Integer.parseInt(port);
-                        if(!(port_num >= 2048 && port_num <= 65536)){
-                            Toast.makeText(MainActivity.this, "端口必须在2048和65536之间", Toast.LENGTH_LONG).show();
-                            return;
-                        }else {
-                            Exception exception = null;
-                            try {
-                                myFTPClientCore = new MyFTPClientCore(host,port_num);
-                            } catch (ServerNotFoundException e) {
-                                exception = e;
-                                e.printStackTrace();
-                            }
+        login.setOnClickListener(v -> {
 
-                            if(exception != null){
-                                Toast.makeText(MainActivity.this, "连接失败", Toast.LENGTH_LONG).show();
-                            }else {
-                                connected = true;
-                                Toast.makeText(MainActivity.this, "连接成功", Toast.LENGTH_LONG).show();
-                            }
-                        }
-                    }
-                }
+            if (!connected) {
+                ToastUtil.showToast(MainActivity.this, "请先连接服务器", Toast.LENGTH_SHORT);
+                return;
             }
-        });
 
-        login.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if(!connected){
-                    Toast.makeText(MainActivity.this,"请先连接服务器",Toast.LENGTH_SHORT).show();
-                }else {
-                    String user = username.getText().toString();
-                    String pass = password.getText().toString();
-                    boolean login_success = myFTPClientCore.login(user,pass);
-                    if(login_success){
-                        loggedin = true;
-                        Toast.makeText(MainActivity.this,"登录成功",Toast.LENGTH_SHORT).show();
-                    }else{
-                        Toast.makeText(MainActivity.this,"登录失败",Toast.LENGTH_SHORT).show();
-                    }
-                }
+            String user = username.getText().toString();
+            String pass = password.getText().toString();
+            boolean login_success = myFTPClientCore.login(user, pass);
+            if (login_success) {
+                loggedin = true;
+                ToastUtil.showToast(MainActivity.this, "登录成功", Toast.LENGTH_SHORT);
+            } else {
+                loggedin = false;
+                ToastUtil.showToast(MainActivity.this, "登录失败", Toast.LENGTH_SHORT);
             }
+
         });
 
 
@@ -240,7 +251,7 @@ public class MainActivity extends AppCompatActivity {
         //scrollview
     }
 
-    private static boolean isNum (String str){
+    private static boolean isNum(String str) {
         for (int i = 0; i < str.length(); i++) {
             if (!Character.isDigit(str.charAt(i)))
                 return false;
