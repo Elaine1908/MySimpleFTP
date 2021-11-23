@@ -39,13 +39,18 @@ public class MainActivity extends AppCompatActivity {
     private Button pasv;
     private TextView status;
     private Switch kali;
+
     private RadioGroup type;
     private RadioButton ascii;
     private RadioButton binary;
 
+    private RadioGroup mode;
+    private RadioGroup structure;
+
     private EditText hostnum;
     private EditText portnum;
     private Button connect;
+    private Button quit;
 
     private MyFTPClientCore myFTPClientCore;
     private boolean connected = false;//client是否已连接
@@ -104,6 +109,32 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+        mode.setOnCheckedChangeListener((radioGroup, i)->{
+            if (!connected) {
+                ToastUtil.showToast(MainActivity.this, "尚未连接", Toast.LENGTH_SHORT);
+                return;
+            }
+            if (!loggedin) {
+                ToastUtil.showToast(MainActivity.this, "尚未登录", Toast.LENGTH_SHORT);
+                return;
+            }
+            RadioButton r = (RadioButton) findViewById(i);
+            ToastUtil.showToast(MainActivity.this,"MODE : "+r.getText().toString(),Toast.LENGTH_SHORT);
+        });
+
+        structure.setOnCheckedChangeListener(((radioGroup, i) -> {
+            if (!connected) {
+                ToastUtil.showToast(MainActivity.this, "尚未连接", Toast.LENGTH_SHORT);
+                return;
+            }
+            if (!loggedin) {
+                ToastUtil.showToast(MainActivity.this, "尚未登录", Toast.LENGTH_SHORT);
+                return;
+            }
+            RadioButton r = (RadioButton) findViewById(i);
+            ToastUtil.showToast(MainActivity.this,"STRUCTURE : "+r.getText().toString(),Toast.LENGTH_SHORT);
+        }));
 
 
         kali.setOnCheckedChangeListener((compoundButton, b) -> {
@@ -216,6 +247,22 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        quit.setOnClickListener(v -> {
+            if (!connected) {
+                ToastUtil.showToast(MainActivity.this, "尚未连接服务器", Toast.LENGTH_SHORT);
+                return;
+            }
+            if(!loggedin){
+                ToastUtil.showToast(MainActivity.this, "尚未登录", Toast.LENGTH_SHORT);
+                return;
+            }
+            myFTPClientCore.quit();
+            ToastUtil.showToast(MainActivity.this, "退出成功", Toast.LENGTH_SHORT);
+            loggedin = false;
+            connected = false;
+            passiveActive = false;
+        });
+
         login.setOnClickListener(v -> {
 
             if (!connected) {
@@ -253,10 +300,14 @@ public class MainActivity extends AppCompatActivity {
         binary = findViewById(R.id.binary);
         kali = findViewById(R.id.kali);
         type = findViewById(R.id.type);
+        mode = findViewById(R.id.mode);
+        structure = findViewById(R.id.structure);
 
         connect = findViewById(R.id.connect);
         portnum = findViewById(R.id.portnum);
         hostnum = findViewById(R.id.hostnum);
+
+        quit = findViewById(R.id.quit);
         //scrollview
     }
 
