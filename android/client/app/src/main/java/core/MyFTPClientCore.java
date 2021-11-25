@@ -1001,6 +1001,10 @@ public class MyFTPClientCore {
         this.progressMonitors.add(progressMonitor);
     }
 
+    public void clearProgressMonitor() {
+        this.progressMonitors.clear();
+    }
+
     /**
      * 通知所有的监视器
      *

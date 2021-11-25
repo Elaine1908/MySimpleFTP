@@ -3,12 +3,11 @@ package com.example.test;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.content.DialogInterface;
+import android.app.ProgressDialog;
 import android.os.Bundle;
 import android.os.StrictMode;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -20,13 +19,11 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Enumeration;
-import java.util.List;
-import java.util.Optional;
-import java.util.Vector;
 
 import core.MyFTPClientCore;
 import core.exception.FTPClientException;
 import core.exception.ServerNotFoundException;
+import task.DownloadUploadTask;
 import utils.DialogUtil;
 import utils.ToastUtil;
 
@@ -67,6 +64,57 @@ public class MainActivity extends AppCompatActivity {
 
 
     private String downloadPath;//文件下载到哪个目录
+
+
+    /**
+     * 下载和上传的按钮点击后的处理
+     */
+    class DownloadClickHandler implements View.OnClickListener {
+
+        private final DownloadUploadTask.OperationType type;
+
+        public DownloadClickHandler(DownloadUploadTask.OperationType type) {
+            this.type = type;
+        }
+
+        @Override
+        public void onClick(View v) {
+            if (!connected) {
+                ToastUtil.showToast(MainActivity.this, "尚未连接", Toast.LENGTH_SHORT);
+                return;
+            }
+            if (!loggedin) {
+                ToastUtil.showToast(MainActivity.this, "尚未登录", Toast.LENGTH_SHORT);
+                return;
+            }
+            if (!passiveActive) {
+                ToastUtil.showToast(MainActivity.this, "未选择主动/被动模式", Toast.LENGTH_SHORT);
+                return;
+            }
+
+            final EditText inputServer = new EditText(MainActivity.this);
+            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+            builder.setTitle("请输入文件所在位置").setIcon(android.R.drawable.ic_dialog_info).setView(inputServer)
+                    .setNegativeButton("取消", null);
+
+            builder.setPositiveButton("确定", (dialog, which) -> {
+                String args = inputServer.getText().toString();
+
+                ProgressDialog downloadProgressDialog = new ProgressDialog(MainActivity.this);
+                downloadProgressDialog.setOwnerActivity(MainActivity.this);
+
+                //新开一个线程来下载
+                Thread thread = new Thread(new DownloadUploadTask(
+                        myFTPClientCore,
+                        type,
+                        args,
+                        downloadProgressDialog));
+
+                thread.start();
+            });
+            builder.show();
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -118,7 +166,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        mode.setOnCheckedChangeListener((radioGroup, i)->{
+        mode.setOnCheckedChangeListener((radioGroup, i) -> {
             if (!connected) {
                 ToastUtil.showToast(MainActivity.this, "尚未连接", Toast.LENGTH_SHORT);
                 return;
@@ -128,7 +176,7 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
             RadioButton r = (RadioButton) findViewById(i);
-            ToastUtil.showToast(MainActivity.this,"MODE : "+r.getText().toString(),Toast.LENGTH_SHORT);
+            ToastUtil.showToast(MainActivity.this, "MODE : " + r.getText().toString(), Toast.LENGTH_SHORT);
         });
 
         structure.setOnCheckedChangeListener(((radioGroup, i) -> {
@@ -141,7 +189,7 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
             RadioButton r = (RadioButton) findViewById(i);
-            ToastUtil.showToast(MainActivity.this,"STRUCTURE : "+r.getText().toString(),Toast.LENGTH_SHORT);
+            ToastUtil.showToast(MainActivity.this, "STRUCTURE : " + r.getText().toString(), Toast.LENGTH_SHORT);
         }));
 
 
@@ -246,9 +294,10 @@ public class MainActivity extends AppCompatActivity {
 
             try {
                 myFTPClientCore = new MyFTPClientCore(host, port_num);
+                myFTPClientCore.setDownloadDirectory(downloadPath);
                 connected = true;
                 ToastUtil.showToast(MainActivity.this, "连接成功", Toast.LENGTH_LONG);
-            } catch (ServerNotFoundException e) {
+            } catch (ServerNotFoundException | FTPClientException e) {
                 connected = false;
                 ToastUtil.showToast(MainActivity.this, e.getMessage(), Toast.LENGTH_LONG);
 
@@ -260,7 +309,7 @@ public class MainActivity extends AppCompatActivity {
                 ToastUtil.showToast(MainActivity.this, "尚未连接服务器", Toast.LENGTH_SHORT);
                 return;
             }
-            if(!loggedin){
+            if (!loggedin) {
                 ToastUtil.showToast(MainActivity.this, "尚未登录", Toast.LENGTH_SHORT);
                 return;
             }
@@ -291,101 +340,11 @@ public class MainActivity extends AppCompatActivity {
 
         });
 
-        retr_file.setOnClickListener(v ->{
-            if (!connected) {
-                ToastUtil.showToast(MainActivity.this, "尚未连接", Toast.LENGTH_SHORT);
-                return;
-            }
-            if (!loggedin) {
-                ToastUtil.showToast(MainActivity.this, "尚未登录", Toast.LENGTH_SHORT);
-                return;
-            }
-            if(!passiveActive){
-                ToastUtil.showToast(MainActivity.this, "未选择主动/被动模式", Toast.LENGTH_SHORT);
-                return;
-            }
+        retr_file.setOnClickListener(new DownloadClickHandler(DownloadUploadTask.OperationType.DOWNLOAD_FILE));
 
-            final EditText inputServer = new EditText(this);
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle("请输入文件所在位置").setIcon(android.R.drawable.ic_dialog_info).setView(inputServer)
-                    .setNegativeButton("取消", null);
-            builder.setPositiveButton("确定", new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int which) {
-                    String args = inputServer.getText().toString();
-                    try {
-                        myFTPClientCore.retrieveSingleFile(args);
-                    } catch (FTPClientException e) {
-                        ToastUtil.showToast(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT);
-                        e.printStackTrace();
-                    }
-                }
-            });
-            builder.show();
-        });
+        retr_folder.setOnClickListener(new DownloadClickHandler(DownloadUploadTask.OperationType.DOWNLOAD_FOLDER));
 
-        retr_folder.setOnClickListener(v ->{
-            if (!connected) {
-                ToastUtil.showToast(MainActivity.this, "尚未连接", Toast.LENGTH_SHORT);
-                return;
-            }
-            if (!loggedin) {
-                ToastUtil.showToast(MainActivity.this, "尚未登录", Toast.LENGTH_SHORT);
-                return;
-            }
-            if(!passiveActive){
-                ToastUtil.showToast(MainActivity.this, "未选择主动/被动模式", Toast.LENGTH_SHORT);
-                return;
-            }
-
-            final EditText inputServer = new EditText(this);
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle("请输入文件夹所在位置").setIcon(android.R.drawable.ic_dialog_info).setView(inputServer)
-                    .setNegativeButton("取消", null);
-            builder.setPositiveButton("确定", new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int which) {
-                    String args = inputServer.getText().toString();
-                    try {
-                        myFTPClientCore.retrieveFolder(args);
-                    } catch (FTPClientException e) {
-                        ToastUtil.showToast(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT);
-                        e.printStackTrace();
-                    }
-                }
-            });
-            builder.show();
-        });
-
-        multi_retr.setOnClickListener(v ->{
-            if (!connected) {
-                ToastUtil.showToast(MainActivity.this, "尚未连接", Toast.LENGTH_SHORT);
-                return;
-            }
-            if (!loggedin) {
-                ToastUtil.showToast(MainActivity.this, "尚未登录", Toast.LENGTH_SHORT);
-                return;
-            }
-            if(!passiveActive){
-                ToastUtil.showToast(MainActivity.this, "未选择主动/被动模式", Toast.LENGTH_SHORT);
-                return;
-            }
-
-            final EditText inputServer = new EditText(this);
-            AlertDialog.Builder builder = new AlertDialog.Builder(this);
-            builder.setTitle("请输入文件夹所在位置").setIcon(android.R.drawable.ic_dialog_info).setView(inputServer)
-                    .setNegativeButton("取消", null);
-            builder.setPositiveButton("确定", new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int which) {
-                    String args = inputServer.getText().toString();
-                    try {
-                        myFTPClientCore.retrieveFolderConcurrently(args);
-                    } catch (FTPClientException e) {
-                        ToastUtil.showToast(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT);
-                        e.printStackTrace();
-                    }
-                }
-            });
-            builder.show();
-        });
+        multi_retr.setOnClickListener(new DownloadClickHandler(DownloadUploadTask.OperationType.DOWNLOAD_FOLDER_CONCURRENTLY));
 
 
     }

@@ -18,6 +18,9 @@ public class FileMeta {
     public String filename;
     public Compressed compressed;
 
+    public FileMeta() {
+    }
+
     public FileMeta(long size, String filename, Compressed compressed) {
         this.size = size;
         this.filename = filename;
