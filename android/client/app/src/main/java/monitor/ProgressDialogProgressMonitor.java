@@ -29,15 +29,18 @@ public class ProgressDialogProgressMonitor implements DownloadUploadProgressMoni
 
     @Override
     public void notify(DownloadUploadProgressData data) {
+        synchronized (this) {
+            //接到通知，更新对话框上的进度！
+            progressDialog.getOwnerActivity().runOnUiThread(() -> {
+                progressDialog.setTitle(data.getType().toString());
+                progressDialog.setMessage(data.getFilename());
 
-        //接到通知，更新对话框上的进度！
-        progressDialog.getOwnerActivity().runOnUiThread(() -> {
-            progressDialog.setTitle(data.getType().toString());
-            progressDialog.setMessage(data.getFilename());
+                double percentage = ((double) data.getDownloaded() / data.getTotal()) * 100;
 
-            double percentage = ((double) data.getDownloaded() / data.getTotal()) * 100;
+                progressDialog.setProgress((int) percentage);
+            });
+        }
 
-            progressDialog.setProgress((int) percentage);
-        });
+
     }
 }

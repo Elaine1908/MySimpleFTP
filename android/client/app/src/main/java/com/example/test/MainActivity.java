@@ -3,8 +3,11 @@ package com.example.test;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.Manifest;
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.StrictMode;
 import android.view.View;
 import android.widget.Button;
@@ -15,10 +18,13 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.leon.lfilepickerlibrary.LFilePicker;
+
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Enumeration;
+import java.util.List;
 
 import core.MyFTPClientCore;
 import core.exception.FTPClientException;
@@ -65,6 +71,11 @@ public class MainActivity extends AppCompatActivity {
 
     private String downloadPath;//文件下载到哪个目录
 
+
+    //由于上传文件和文件夹，需要调用文件选择器的Activity，返回时都会回调onActivityResult函数，因此需要使用RequestCode进行区分
+    private int UPLOAD_FILE_REQUEST_CODE = 1000;
+    private int UPLOAD_FOLDER_REQUEST_CODE = 1001;
+    private int UPLOAD_FOLDER_CONCURRENTLY_REQUEST_CODE = 1002;
 
     /**
      * 下载和上传的按钮点击后的处理
@@ -116,6 +127,34 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * 在用户选择完文件/文件夹后，上传的处理
+     */
+    class UploadHandlerAfterChoosing {
+
+        private final DownloadUploadTask.OperationType type;
+        private final String chooseResult;
+
+        public UploadHandlerAfterChoosing(DownloadUploadTask.OperationType type, String chooseResult) {
+            this.type = type;
+            this.chooseResult = chooseResult;
+        }
+
+        public void run() {
+            ProgressDialog downloadProgressDialog = new ProgressDialog(MainActivity.this);
+            downloadProgressDialog.setOwnerActivity(MainActivity.this);
+
+            //新开一个线程来下载
+            Thread thread = new Thread(new DownloadUploadTask(
+                    myFTPClientCore,
+                    type,
+                    chooseResult,
+                    downloadProgressDialog));
+
+            thread.start();
+        }
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -124,6 +163,9 @@ public class MainActivity extends AppCompatActivity {
         //为了开发方便，禁用掉全部的严格模式限制
         StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().build());
         StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().build());
+
+        //申请文件访问权限
+        requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
 
         setTitle("FTP客户端" + getLocalHostExactAddress());
 
@@ -346,7 +388,93 @@ public class MainActivity extends AppCompatActivity {
 
         multi_retr.setOnClickListener(new DownloadClickHandler(DownloadUploadTask.OperationType.DOWNLOAD_FOLDER_CONCURRENTLY));
 
+        stor_file.setOnClickListener(view -> {
 
+            if (!checkConnectionLoginAndPassiveActive()) {
+                return;
+            }
+
+            //这里是选择文件
+            new LFilePicker()
+                    .withActivity(MainActivity.this)
+                    .withRequestCode(UPLOAD_FILE_REQUEST_CODE)
+                    .withStartPath(downloadPath)//指定初始显示路径
+                    .withMaxNum(1)
+                    .start();
+        });
+
+        stor_folder.setOnClickListener(view -> {
+
+            if (!checkConnectionLoginAndPassiveActive()) {
+                return;
+            }
+            //上传文件夹，应该是选择文件夹
+            new LFilePicker()
+                    .withActivity(MainActivity.this)
+                    .withRequestCode(UPLOAD_FOLDER_REQUEST_CODE)
+                    .withStartPath(downloadPath)//指定初始显示路径
+                    .withChooseMode(false)//这里应该选择目录
+                    .start();
+        });
+
+        multi_stor.setOnClickListener(view -> {
+
+            if (!checkConnectionLoginAndPassiveActive()) {
+                return;
+            }
+            //上传文件夹，应该是选择文件夹
+            new LFilePicker()
+                    .withActivity(MainActivity.this)
+                    .withRequestCode(UPLOAD_FOLDER_CONCURRENTLY_REQUEST_CODE)
+                    .withStartPath(downloadPath)//指定初始显示路径
+                    .withChooseMode(false)//这里应该选择目录
+                    .start();
+        });
+    }
+
+    public boolean checkConnectionLoginAndPassiveActive() {
+        //检查是否登录，连接等
+        if (!connected) {
+            ToastUtil.showToast(MainActivity.this, "尚未连接", Toast.LENGTH_SHORT);
+            return false;
+        }
+        if (!loggedin) {
+            ToastUtil.showToast(MainActivity.this, "尚未登录", Toast.LENGTH_SHORT);
+            return false;
+        }
+        if (!passiveActive) {
+            ToastUtil.showToast(MainActivity.this, "未选择主动/被动模式", Toast.LENGTH_SHORT);
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == RESULT_OK) {
+            if (requestCode == UPLOAD_FILE_REQUEST_CODE) {//上传单个文件
+
+                List<String> list = data.getStringArrayListExtra("paths");
+
+                String filename = list.get(0);
+
+                new UploadHandlerAfterChoosing(DownloadUploadTask.OperationType.UPLOAD_FILE, filename).run();
+
+            } else if (requestCode == UPLOAD_FOLDER_REQUEST_CODE) {//上传目录
+
+                String path = data.getStringExtra("path");
+
+                new UploadHandlerAfterChoosing(DownloadUploadTask.OperationType.UPLOAD_FOLDER, path).run();
+
+            } else if (requestCode == UPLOAD_FOLDER_CONCURRENTLY_REQUEST_CODE) {//并发上传目录
+
+                String path = data.getStringExtra("path");
+
+                new UploadHandlerAfterChoosing(DownloadUploadTask.OperationType.UPLOAD_FOLDER_CONCURRENTLY, path).run();
+
+            }
+        }
     }
 
     private void findAllViews() {
