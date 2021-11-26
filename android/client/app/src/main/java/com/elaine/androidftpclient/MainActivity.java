@@ -168,8 +168,6 @@ public class MainActivity extends AppCompatActivity {
         StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().build());
         StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().build());
 
-        ;
-
         //申请文件访问权限
         requestPermissions(new String[]{Manifest.permission.MANAGE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
 
@@ -180,7 +178,13 @@ public class MainActivity extends AppCompatActivity {
 
         //获取下载目录
         downloadPath = getApplicationContext().getExternalFilesDir("ftp_download").getAbsolutePath();
+
+        //为安卓11及更高版本弹出手动打开允许管理所有文件的提示
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            DialogUtil.simpleAlert(this, "提示", "如果在Android11或更高版本上遇到上传无法选择到文件，请手动在权限设置中打开此程序的\"允许管理所有文件\"");
+        }
         DialogUtil.simpleAlert(this, "下载目录", downloadPath);
+
 
         type.setOnCheckedChangeListener((radioGroup, i) -> {
 
