@@ -1,5 +1,6 @@
 package com.elaine.androidftpclient;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -154,14 +155,20 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
+            ToastUtil.showToast(this, throwable.getMessage(), Toast.LENGTH_SHORT);
+        });
         setContentView(R.layout.activity_main);
 
         //为了开发方便，禁用掉全部的严格模式限制
         StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().build());
         StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().build());
+
+        ;
 
         //申请文件访问权限
         requestPermissions(new String[]{Manifest.permission.MANAGE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
@@ -229,7 +236,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         structure.setOnCheckedChangeListener(((radioGroup, i) -> {
-            new Thread(()->{
+            new Thread(() -> {
                 if (!connected) {
                     ToastUtil.showToast(MainActivity.this, "尚未连接", Toast.LENGTH_SHORT);
                     return;
@@ -246,7 +253,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         kali.setOnCheckedChangeListener((compoundButton, b) -> {
-            new Thread(()->{
+            new Thread(() -> {
                 if (!connected) {
                     ToastUtil.showToast(MainActivity.this, "尚未连接", Toast.LENGTH_SHORT);
                     //把checked状态换回去！
@@ -277,7 +284,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         pasv.setOnClickListener(v -> {
-            new Thread(()->{
+            new Thread(() -> {
                 if (!connected) {
                     ToastUtil.showToast(MainActivity.this, "尚未连接", Toast.LENGTH_SHORT);
                     return;
@@ -300,8 +307,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         port.setOnClickListener(v -> {
-
-            new Thread(()->{
+            new Thread(() -> {
                 if (!connected) {
                     ToastUtil.showToast(MainActivity.this, "尚未连接", Toast.LENGTH_SHORT);
                     return;
@@ -325,7 +331,7 @@ public class MainActivity extends AppCompatActivity {
 
         connect.setOnClickListener(v -> {
 
-            new Thread(()->{
+            new Thread(() -> {
                 if (myFTPClientCore != null) {//如果原先还有客户端对象，就关闭掉旧的客户端对象
                     myFTPClientCore.close();
                 }
@@ -368,7 +374,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         quit.setOnClickListener(v -> {
-            new Thread(()->{
+            new Thread(() -> {
                 if (!connected) {
                     ToastUtil.showToast(MainActivity.this, "尚未连接服务器", Toast.LENGTH_SHORT);
                     return;
@@ -387,7 +393,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         login.setOnClickListener(v -> {
-            new Thread(()->{
+            new Thread(() -> {
                 if (!connected) {
                     ToastUtil.showToast(MainActivity.this, "请先连接服务器", Toast.LENGTH_SHORT);
                     return;
