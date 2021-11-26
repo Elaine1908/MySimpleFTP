@@ -45,3 +45,9 @@ dependencies {
     implementation group: 'com.leon', name: 'lfilepickerlibrary', version: '1.8.0'
 
 }
+
+android.applicationVariants.all { variant ->
+    variant.outputs.all {
+        outputFileName = "AndroidFTPClient.apk"
+    }
+}

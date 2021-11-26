@@ -1,7 +1,6 @@
 package utils;
 
-import android.content.Context;
-import android.os.Build;
+import android.app.Activity;
 import android.widget.Toast;
 
 /**
@@ -11,17 +10,17 @@ public class ToastUtil {
 
     private static Toast lastToast;
 
-    public static void showToast(Context mContext, String text, int duration) {
-        synchronized (ToastUtil.class) {
-            if (lastToast != null) {
-                lastToast.cancel();
+    public static void showToast(Activity activity, String text, int duration) {
+        activity.runOnUiThread(() -> {
+            synchronized (ToastUtil.class) {
+                if (lastToast != null) {
+                    lastToast.cancel();
+                }
+                Toast thisToast = Toast.makeText(activity, text, duration);
+                lastToast = thisToast;
+                thisToast.show();
             }
-            Toast thisToast = Toast.makeText(mContext, text, duration);
-            lastToast = thisToast;
-            thisToast.show();
-        }
-
-
+        });
     }
 
 }

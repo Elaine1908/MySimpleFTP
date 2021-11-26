@@ -1,4 +1,4 @@
-package com.example.test;
+package com.elaine.androidftpclient;
 
 import android.content.Context;
 

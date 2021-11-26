@@ -2,6 +2,7 @@ package com.huajuan.androidftpserver;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.Manifest;
 import android.app.Application;
 import android.os.Bundle;
 import android.os.StrictMode;
@@ -49,6 +50,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        //申请文件访问权限
+        requestPermissions(new String[]{Manifest.permission.MANAGE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
 
         //为了开发方便，禁用掉全部的严格模式限制
         StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().build());
