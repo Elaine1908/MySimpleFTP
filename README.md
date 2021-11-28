@@ -4,6 +4,12 @@
 
 贡献：各50%。
 
+## demo视频链接
+
+天翼云盘：https://cloud.189.cn/web/share?code=fm6v22iYfmqi（访问码：7ni7）
+百度网盘：链接：https://pan.baidu.com/s/1PMqCVBmBTjOsd8TPPeaHTw 提取码：1wpv
+OneDrive：https://1drv.ms/v/s!AiEar_HjbkFVhJkOUx2QYE2aKxBNlg?e=xUP4pI 密码：ftpdemo
+
 ## client
 
 ### 核心类属性
